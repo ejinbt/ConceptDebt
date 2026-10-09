@@ -1,0 +1,32 @@
+[
+  {"id": "arithmetic", "name": "Integer Arithmetic", "level": 0, "description": "Adding, subtracting, multiplying and dividing whole numbers.", "prerequisites": []},
+  {"id": "negatives", "name": "Negative Numbers", "level": 0, "description": "Operations with negative numbers and sign rules.", "prerequisites": ["arithmetic"]},
+  {"id": "order_ops", "name": "Order of Operations", "level": 0, "description": "Brackets, powers, multiplication/division before addition/subtraction.", "prerequisites": ["arithmetic"]},
+  {"id": "fractions", "name": "Fraction Operations", "level": 0, "description": "Adding, subtracting, multiplying and dividing fractions.", "prerequisites": ["arithmetic"]},
+  {"id": "exponents", "name": "Exponent Rules", "level": 0, "description": "Product, quotient and power rules for exponents.", "prerequisites": ["arithmetic"]},
+
+  {"id": "variables", "name": "Variables & Expressions", "level": 1, "description": "Using letters to stand for numbers and evaluating expressions.", "prerequisites": ["arithmetic"]},
+  {"id": "distributive", "name": "Distributive Property", "level": 1, "description": "Multiplying a factor across every term inside brackets: a(b + c) = ab + ac.", "prerequisites": ["arithmetic", "negatives", "order_ops"]},
+  {"id": "like_terms", "name": "Combining Like Terms", "level": 1, "description": "Adding terms with the same variable part.", "prerequisites": ["variables"]},
+  {"id": "equality", "name": "Balancing Equations", "level": 1, "description": "Doing the same inverse operation to both sides of an equation.", "prerequisites": ["arithmetic", "negatives"]},
+  {"id": "percent", "name": "Ratios & Percentages", "level": 1, "description": "Expressing parts of a whole as ratios and percentages.", "prerequisites": ["fractions"]},
+
+  {"id": "alg_manip", "name": "Algebraic Manipulation", "level": 2, "description": "Rewriting expressions by expanding, collecting and simplifying.", "prerequisites": ["distributive", "like_terms", "fractions"]},
+  {"id": "linear_eq", "name": "Linear Equations", "level": 2, "description": "Solving equations of the form ax + b = c, including with brackets.", "prerequisites": ["alg_manip", "equality"]},
+  {"id": "factoring", "name": "Factoring", "level": 2, "description": "Writing an expression as a product, the reverse of expanding.", "prerequisites": ["distributive", "like_terms"]},
+  {"id": "expanding", "name": "Expanding Products", "level": 2, "description": "Multiplying out products of brackets such as (x + a)(x + b).", "prerequisites": ["distributive", "exponents"]},
+  {"id": "inequalities", "name": "Linear Inequalities", "level": 2, "description": "Solving inequalities and flipping the sign when multiplying by a negative.", "prerequisites": ["linear_eq", "negatives"]},
+
+  {"id": "linear_graphs", "name": "Linear Graphs & Slope", "level": 3, "description": "Gradient, intercept and the equation y = mx + c.", "prerequisites": ["linear_eq", "fractions"]},
+  {"id": "simultaneous", "name": "Simultaneous Equations", "level": 3, "description": "Solving two linear equations together.", "prerequisites": ["linear_eq"]},
+  {"id": "rational_expr", "name": "Rational Expressions", "level": 3, "description": "Simplifying and combining algebraic fractions.", "prerequisites": ["fractions", "factoring"]},
+  {"id": "quadratics", "name": "Quadratic Equations", "level": 3, "description": "Solving equations involving x squared.", "prerequisites": ["factoring", "expanding", "linear_eq"]},
+  {"id": "polynomials", "name": "Polynomials", "level": 3, "description": "Adding, multiplying and simplifying polynomials.", "prerequisites": ["expanding", "like_terms"]},
+
+  {"id": "functions", "name": "Functions", "level": 4, "description": "Function notation, domain, range and composition.", "prerequisites": ["linear_graphs", "variables"]},
+  {"id": "quad_formula", "name": "Quadratic Formula", "level": 4, "description": "Solving any quadratic with the formula and the discriminant.", "prerequisites": ["quadratics", "order_ops", "negatives"]},
+  {"id": "exponential", "name": "Exponential Functions", "level": 4, "description": "Growth and decay functions of the form a·b^x.", "prerequisites": ["exponents", "functions"]},
+
+  {"id": "limits", "name": "Limits", "level": 5, "description": "The value a function approaches as its input approaches a point.", "prerequisites": ["functions", "rational_expr"]},
+  {"id": "derivatives", "name": "Derivatives", "level": 5, "description": "Rate of change and the power rule.", "prerequisites": ["limits", "polynomials", "exponents"]}
+]

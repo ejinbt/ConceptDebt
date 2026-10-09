@@ -1,0 +1,7 @@
+fastapi==0.143.0
+uvicorn[standard]==0.53.0
+sqlmodel==0.0.48
+sympy==1.14.0
+openai==3.27.0
+python-dotenv==1.2.3
+psycopg[binary]==3.2.10

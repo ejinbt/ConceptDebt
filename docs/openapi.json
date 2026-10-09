@@ -1,0 +1,1545 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Concept Debt API",
+    "description": "Traces repeated mistakes through a prerequisite graph to the root concept.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Health",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/diagnostic": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Diagnostic",
+        "description": "The diagnostic test, in order. Answers are not included.",
+        "operationId": "diagnostic_api_diagnostic_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/QuestionOut"
+                  },
+                  "type": "array",
+                  "title": "Response Diagnostic Api Diagnostic Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/concepts": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Concepts",
+        "operationId": "concepts_api_concepts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConceptOut"
+                  },
+                  "type": "array",
+                  "title": "Response Concepts Api Concepts Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/graph": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Graph",
+        "description": "Nodes and edges for React Flow / D3. Pass session_id to colour nodes by debt.",
+        "operationId": "graph_api_graph_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teacher/overview": {
+      "get": {
+        "tags": [
+          "content"
+        ],
+        "summary": "Teacher Overview",
+        "description": "Class-level view from every session's 'before' snapshot.",
+        "operationId": "teacher_overview_api_teacher_overview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeacherOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/demo/session": {
+      "post": {
+        "tags": [
+          "content",
+          "demo"
+        ],
+        "summary": "Demo Session",
+        "description": "Create a session with the diagnostic already answered by the demo student.\nHandy for building the UI without clicking through the test.",
+        "operationId": "demo_session_api_demo_session_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions": {
+      "post": {
+        "tags": [
+          "learning"
+        ],
+        "summary": "Create Session",
+        "operationId": "create_session_api_sessions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/SessionCreate"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}": {
+      "get": {
+        "tags": [
+          "learning"
+        ],
+        "summary": "Read Session",
+        "operationId": "read_session_api_sessions__session_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/attempts": {
+      "post": {
+        "tags": [
+          "learning"
+        ],
+        "summary": "Submit Attempt",
+        "operationId": "submit_attempt_api_attempts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttemptIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttemptOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/attempts": {
+      "get": {
+        "tags": [
+          "learning"
+        ],
+        "summary": "List Attempts",
+        "operationId": "list_attempts_api_sessions__session_id__attempts_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AttemptOut"
+                  },
+                  "title": "Response List Attempts Api Sessions  Session Id  Attempts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/score": {
+      "get": {
+        "tags": [
+          "learning"
+        ],
+        "summary": "Plain Score",
+        "description": "The 'symptom' view: a normal percentage score on the diagnostic.",
+        "operationId": "plain_score_api_sessions__session_id__score_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/debug": {
+      "post": {
+        "tags": [
+          "learning"
+        ],
+        "summary": "Debug Learning",
+        "description": "Run the debt engine, pick the root cause and save a 'before' snapshot.",
+        "operationId": "debug_learning_api_sessions__session_id__debug_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/debt": {
+      "get": {
+        "tags": [
+          "learning"
+        ],
+        "summary": "Current Debt",
+        "description": "Live debt without saving anything. Explanation is template-only (fast).",
+        "operationId": "current_debt_api_sessions__session_id__debt_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/repair": {
+      "post": {
+        "tags": [
+          "learning"
+        ],
+        "summary": "Start Repair",
+        "operationId": "start_repair_api_sessions__session_id__repair_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 5,
+              "minimum": 1,
+              "default": 3,
+              "title": "Count"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepairOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{session_id}/reverify": {
+      "post": {
+        "tags": [
+          "learning"
+        ],
+        "summary": "Reverify",
+        "description": "Recompute debt after repair and compare with the 'before' snapshot.",
+        "operationId": "reverify_api_sessions__session_id__reverify_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReverifyOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnalysisOut": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "diagnostic",
+              "debugged",
+              "repair",
+              "done"
+            ],
+            "title": "Phase"
+          },
+          "answered": {
+            "type": "integer",
+            "title": "Answered"
+          },
+          "wrong": {
+            "type": "integer",
+            "title": "Wrong"
+          },
+          "root": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RootOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "trace": {
+            "items": {
+              "$ref": "#/components/schemas/TraceStep"
+            },
+            "type": "array",
+            "title": "Trace",
+            "description": "From the most advanced failed topic down to the root"
+          },
+          "concepts": {
+            "items": {
+              "$ref": "#/components/schemas/ConceptDebtOut"
+            },
+            "type": "array",
+            "title": "Concepts",
+            "description": "Concepts with debt >= 1, highest first"
+          },
+          "explanation": {
+            "$ref": "#/components/schemas/ExplanationOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "phase",
+          "answered",
+          "wrong",
+          "root",
+          "trace",
+          "concepts",
+          "explanation"
+        ],
+        "title": "AnalysisOut"
+      },
+      "AttemptIn": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "question_id": {
+            "type": "string",
+            "title": "Question Id"
+          },
+          "answer": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Answer"
+          },
+          "working": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Working",
+            "description": "Optional working or explanation"
+          },
+          "time_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "question_id",
+          "answer"
+        ],
+        "title": "AttemptIn"
+      },
+      "AttemptOut": {
+        "properties": {
+          "attempt_id": {
+            "type": "integer",
+            "title": "Attempt Id"
+          },
+          "question_id": {
+            "type": "string",
+            "title": "Question Id"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "diagnostic",
+              "repair"
+            ],
+            "title": "Mode"
+          },
+          "correct": {
+            "type": "boolean",
+            "title": "Correct"
+          },
+          "correct_answer": {
+            "type": "string",
+            "title": "Correct Answer"
+          },
+          "misconception": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MisconceptionRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "rule",
+              "ai",
+              "unclassified",
+              "correct"
+            ],
+            "title": "Source"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attempt_id",
+          "question_id",
+          "mode",
+          "correct",
+          "correct_answer",
+          "misconception",
+          "confidence",
+          "source",
+          "rationale"
+        ],
+        "title": "AttemptOut"
+      },
+      "ConceptDebtOut": {
+        "properties": {
+          "concept_id": {
+            "type": "string",
+            "title": "Concept Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "debt": {
+            "type": "number",
+            "title": "Debt",
+            "description": "0-100"
+          },
+          "mistakes": {
+            "type": "integer",
+            "title": "Mistakes",
+            "description": "Wrong answers blamed directly on this concept"
+          },
+          "evidence_count": {
+            "type": "integer",
+            "title": "Evidence Count",
+            "description": "Wrong answers that touched this concept at all"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "affected_topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Affected Topics"
+          },
+          "misconceptions": {
+            "items": {
+              "$ref": "#/components/schemas/MisconceptionCount"
+            },
+            "type": "array",
+            "title": "Misconceptions"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "root",
+              "trace",
+              "failed",
+              "at_risk",
+              "ok"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "concept_id",
+          "name",
+          "level",
+          "debt",
+          "mistakes",
+          "evidence_count",
+          "confidence",
+          "affected_topics",
+          "misconceptions",
+          "status"
+        ],
+        "title": "ConceptDebtOut"
+      },
+      "ConceptOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "prerequisites": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Prerequisites"
+          },
+          "misconceptions": {
+            "items": {
+              "$ref": "#/components/schemas/MisconceptionRef"
+            },
+            "type": "array",
+            "title": "Misconceptions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "level",
+          "description",
+          "prerequisites",
+          "misconceptions"
+        ],
+        "title": "ConceptOut"
+      },
+      "DebtChange": {
+        "properties": {
+          "concept_id": {
+            "type": "string",
+            "title": "Concept Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "before": {
+            "type": "number",
+            "title": "Before"
+          },
+          "after": {
+            "type": "number",
+            "title": "After"
+          },
+          "change": {
+            "type": "number",
+            "title": "Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "concept_id",
+          "name",
+          "before",
+          "after",
+          "change"
+        ],
+        "title": "DebtChange"
+      },
+      "ExplanationOut": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "advice": {
+            "type": "string",
+            "title": "Advice"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "ai",
+              "template"
+            ],
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary",
+          "advice",
+          "source"
+        ],
+        "title": "ExplanationOut"
+      },
+      "GraphEdge": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "The prerequisite"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target",
+            "description": "The concept that depends on it"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "target"
+        ],
+        "title": "GraphEdge"
+      },
+      "GraphNode": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "debt": {
+            "type": "number",
+            "title": "Debt"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "root",
+              "trace",
+              "failed",
+              "at_risk",
+              "ok"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "level",
+          "description",
+          "debt",
+          "status"
+        ],
+        "title": "GraphNode"
+      },
+      "GraphOut": {
+        "properties": {
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/GraphNode"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdge"
+            },
+            "type": "array",
+            "title": "Edges"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nodes",
+          "edges"
+        ],
+        "title": "GraphOut"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "ai_enabled": {
+            "type": "boolean",
+            "title": "Ai Enabled"
+          },
+          "ai_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Model"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "ai_enabled",
+          "ai_model"
+        ],
+        "title": "HealthOut"
+      },
+      "MisconceptionCount": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "count"
+        ],
+        "title": "MisconceptionCount"
+      },
+      "MisconceptionRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "MisconceptionRef"
+      },
+      "QuestionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "concept_id": {
+            "type": "string",
+            "title": "Concept Id"
+          },
+          "concept_name": {
+            "type": "string",
+            "title": "Concept Name"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "number",
+              "expression",
+              "factored"
+            ],
+            "title": "Kind"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "is_repair": {
+            "type": "boolean",
+            "title": "Is Repair"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "concept_id",
+          "concept_name",
+          "kind",
+          "prompt",
+          "is_repair"
+        ],
+        "title": "QuestionOut"
+      },
+      "RepairOut": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "root": {
+            "$ref": "#/components/schemas/TraceStep"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/QuestionOut"
+            },
+            "type": "array",
+            "title": "Questions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "root",
+          "questions"
+        ],
+        "title": "RepairOut"
+      },
+      "ReverifyOut": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "root_concept_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Root Concept Id"
+          },
+          "root_before": {
+            "type": "number",
+            "title": "Root Before"
+          },
+          "root_after": {
+            "type": "number",
+            "title": "Root After"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/DebtChange"
+            },
+            "type": "array",
+            "title": "Changes"
+          },
+          "repair_answered": {
+            "type": "integer",
+            "title": "Repair Answered"
+          },
+          "repair_correct": {
+            "type": "integer",
+            "title": "Repair Correct"
+          },
+          "analysis": {
+            "$ref": "#/components/schemas/AnalysisOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "root_concept_id",
+          "root_before",
+          "root_after",
+          "changes",
+          "repair_answered",
+          "repair_correct",
+          "analysis"
+        ],
+        "title": "ReverifyOut"
+      },
+      "RootOut": {
+        "properties": {
+          "concept_id": {
+            "type": "string",
+            "title": "Concept Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "debt": {
+            "type": "number",
+            "title": "Debt"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "coverage": {
+            "type": "number",
+            "title": "Coverage",
+            "description": "Share of failed topics this root explains, 0-1"
+          },
+          "mistakes": {
+            "type": "integer",
+            "title": "Mistakes"
+          },
+          "affected_topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Affected Topics"
+          },
+          "misconceptions": {
+            "items": {
+              "$ref": "#/components/schemas/MisconceptionCount"
+            },
+            "type": "array",
+            "title": "Misconceptions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "concept_id",
+          "name",
+          "debt",
+          "confidence",
+          "coverage",
+          "mistakes",
+          "affected_topics",
+          "misconceptions"
+        ],
+        "title": "RootOut"
+      },
+      "ScoreOut": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "answered": {
+            "type": "integer",
+            "title": "Answered"
+          },
+          "correct": {
+            "type": "integer",
+            "title": "Correct"
+          },
+          "total_questions": {
+            "type": "integer",
+            "title": "Total Questions"
+          },
+          "percent": {
+            "type": "number",
+            "title": "Percent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "answered",
+          "correct",
+          "total_questions",
+          "percent"
+        ],
+        "title": "ScoreOut"
+      },
+      "SessionCreate": {
+        "properties": {
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label",
+            "description": "Optional nickname. Don't send personal data."
+          }
+        },
+        "type": "object",
+        "title": "SessionCreate"
+      },
+      "SessionOut": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "diagnostic",
+              "debugged",
+              "repair",
+              "done"
+            ],
+            "title": "Phase"
+          },
+          "root_concept_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Root Concept Id"
+          },
+          "answered": {
+            "type": "integer",
+            "title": "Answered"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "label",
+          "phase",
+          "root_concept_id",
+          "answered",
+          "created_at"
+        ],
+        "title": "SessionOut"
+      },
+      "TeacherConcept": {
+        "properties": {
+          "concept_id": {
+            "type": "string",
+            "title": "Concept Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "sessions_as_root": {
+            "type": "integer",
+            "title": "Sessions As Root"
+          },
+          "avg_debt": {
+            "type": "number",
+            "title": "Avg Debt"
+          },
+          "students_with_debt": {
+            "type": "integer",
+            "title": "Students With Debt"
+          }
+        },
+        "type": "object",
+        "required": [
+          "concept_id",
+          "name",
+          "sessions_as_root",
+          "avg_debt",
+          "students_with_debt"
+        ],
+        "title": "TeacherConcept"
+      },
+      "TeacherOut": {
+        "properties": {
+          "sessions": {
+            "type": "integer",
+            "title": "Sessions"
+          },
+          "debugged_sessions": {
+            "type": "integer",
+            "title": "Debugged Sessions"
+          },
+          "concepts": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherConcept"
+            },
+            "type": "array",
+            "title": "Concepts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sessions",
+          "debugged_sessions",
+          "concepts"
+        ],
+        "title": "TeacherOut"
+      },
+      "TraceStep": {
+        "properties": {
+          "concept_id": {
+            "type": "string",
+            "title": "Concept Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "debt": {
+            "type": "number",
+            "title": "Debt"
+          }
+        },
+        "type": "object",
+        "required": [
+          "concept_id",
+          "name",
+          "debt"
+        ],
+        "title": "TraceStep"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
