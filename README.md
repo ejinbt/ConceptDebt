@@ -12,13 +12,17 @@ wrong answer → misconception → prerequisite graph → debt score → repair 
 
 ## Run the backend
 
+One-time setup creates the Python virtualenv in `backend/.venv`, installs
+everything and copies `.env.example` to `.env`:
+
 ```bash
 cd backend
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements-dev.txt
-cp .env.example .env                                  # optional: add AI key
+./setup.sh && source .venv/bin/activate              # Linux / macOS
+# .\setup.ps1 ; .\.venv\Scripts\Activate.ps1          # Windows PowerShell
 uvicorn app.main:app --reload
 ```
+
+Put your Featherless key in `backend/.env` (`AI_API_KEY=`) to switch the AI on.
 
 - Test UI: http://localhost:8000/
 - API docs: http://localhost:8000/docs
