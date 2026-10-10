@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { Navbar } from "./components/Navbar";
+import { DiagnosticView } from "./components/DiagnosticView";
+import { ScoreView } from "./components/ScoreView";
 import { useSessionStore } from "./hooks/useSessionStore";
-import { Activity, Play, ArrowRight, ShieldAlert, Sparkles } from "lucide-react";
+import { Play, ArrowRight, ShieldAlert, Sparkles, Activity } from "lucide-react";
 import { api } from "./services/api";
+import type { SessionOut } from "./types/api";
 
 export function App() {
   const { session, setSession, clearSession } = useSessionStore();
@@ -10,6 +13,10 @@ export function App() {
   const [label, setLabel] = useState("");
   const [resumeId, setResumeId] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  // Sub-phase state when in diagnostic flow (whether answering questions or viewing score symptom)
+  const [viewingScore, setViewingScore] = useState(false);
+  const [isDebugging, setIsDebugging] = useState(false);
 
   const phase = session?.phase || "initial";
 
@@ -19,6 +26,7 @@ export function App() {
     try {
       const newSession = await api.createSession(label.trim() || undefined);
       setSession(newSession);
+      setViewingScore(false);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to create session");
     } finally {
@@ -32,6 +40,8 @@ export function App() {
     try {
       const demoSession = await api.createDemoSession();
       setSession(demoSession);
+      // Demo session has already answered 13 questions, so show symptom score immediately!
+      setViewingScore(true);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load demo session");
     } finally {
@@ -46,6 +56,9 @@ export function App() {
     try {
       const restored = await api.getSession(resumeId.trim());
       setSession(restored);
+      if (restored.answered >= 5 && restored.phase === "diagnostic") {
+        setViewingScore(true);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Session not found");
     } finally {
@@ -53,9 +66,33 @@ export function App() {
     }
   };
 
+  const handleDebugLearning = async () => {
+    if (!session) return;
+    setIsDebugging(true);
+    setError(null);
+    try {
+      await api.runDebug(session.session_id);
+      // Refresh session state to advance phase to 'debugged'
+      const updated = await api.getSession(session.session_id);
+      setSession(updated);
+      setViewingScore(false);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to run debug analysis");
+    } finally {
+      setIsDebugging(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0E0E10] text-[#F3F3F4] flex flex-col font-sans">
-      <Navbar phase={phase} sessionId={session?.session_id || null} onReset={clearSession} />
+      <Navbar 
+        phase={viewingScore ? "diagnostic" : phase} 
+        sessionId={session?.session_id || null} 
+        onReset={() => {
+          clearSession();
+          setViewingScore(false);
+        }} 
+      />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-8 flex flex-col justify-center">
         {/* Error notification */}
@@ -66,7 +103,7 @@ export function App() {
           </div>
         )}
 
-        {/* Phase: Initial Landing */}
+        {/* Phase 1: Initial Landing / Start */}
         {phase === "initial" && (
           <div className="max-w-3xl mx-auto w-full text-center py-6">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#2A2A2F] border border-[#35353B] text-xs font-mono text-[#9E9EA7] mb-6">
@@ -104,7 +141,7 @@ export function App() {
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
                     placeholder="Enter nickname (optional)"
-                    className="w-full bg-[#0E0E10] border border-[#35353B] rounded-lg px-3 py-2 text-xs text-[#F3F3F4] focus:outline-none focus:border-[#D00000] mb-4"
+                    className="w-full bg-[#0E0E10] border border-[#35353B] rounded-lg px-3 py-2 text-xs text-[#F3F3F4] focus:outline-none focus:border-[#D00000] mb-4 font-mono"
                   />
                 </div>
                 <button
@@ -164,20 +201,42 @@ export function App() {
           </div>
         )}
 
-        {/* Placeholder when session is active (ready for Phase 2 & 3) */}
-        {phase !== "initial" && (
+        {/* Phase 2: Diagnostic Assessment Flow */}
+        {phase === "diagnostic" && !viewingScore && (
+          <DiagnosticView
+            session={session!}
+            onComplete={() => setViewingScore(true)}
+            onSessionUpdate={(s: SessionOut) => setSession(s)}
+          />
+        )}
+
+        {/* Phase 2: Diagnostic Score Symptom Reveal */}
+        {phase === "diagnostic" && viewingScore && (
+          <ScoreView
+            session={session!}
+            onBackToTest={() => setViewingScore(false)}
+            onStartDebug={handleDebugLearning}
+            isDebugging={isDebugging}
+          />
+        )}
+
+        {/* Placeholder for Debugged & Later Phases (Ready for Phase 3) */}
+        {(phase === "debugged" || phase === "repair" || phase === "done") && (
           <div className="max-w-xl mx-auto text-center py-12 p-8 rounded-2xl bg-[#2A2A2F] border border-[#35353B]">
             <div className="w-12 h-12 rounded-xl bg-[#6A040F] text-[#F3F3F4] flex items-center justify-center mx-auto mb-4">
               <Activity className="w-6 h-6 text-[#D00000]" />
             </div>
             <h2 className="text-2xl font-display font-bold text-[#F3F3F4] mb-2">
-              Active Phase: {phase.toUpperCase()}
+              Phase: {phase.toUpperCase()}
             </h2>
             <p className="text-xs text-[#9E9EA7] font-mono mb-6">
-              Session ID: {session?.session_id}
+              Root Analysis computed successfully. Ready for Phase 3 & 4 (Debugger Console & React Flow Graph).
             </p>
             <button
-              onClick={clearSession}
+              onClick={() => {
+                clearSession();
+                setViewingScore(false);
+              }}
               className="px-4 py-2 rounded-lg bg-[#35353B] hover:bg-[#6A040F] text-xs text-[#F3F3F4] font-semibold transition-colors"
             >
               Reset Session
