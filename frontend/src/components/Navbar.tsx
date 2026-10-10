@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
-import { Activity, Radio, Cpu, RotateCcw } from "lucide-react";
+import { Activity, Radio, Cpu, RotateCcw, GraduationCap } from "lucide-react";
 import { api } from "../services/api";
 import type { HealthOut, Phase } from "../types/api";
 
 interface NavbarProps {
   phase: Phase | "initial";
   sessionId: string | null;
+  grade?: number;
   onReset: () => void;
 }
 
-export function Navbar({ phase, sessionId, onReset }: NavbarProps) {
+export function Navbar({ phase, sessionId, grade, onReset }: NavbarProps) {
   const [health, setHealth] = useState<HealthOut | null>(null);
 
   useEffect(() => {
@@ -70,7 +71,14 @@ export function Navbar({ phase, sessionId, onReset }: NavbarProps) {
         </nav>
 
         {/* Status Indicators & Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {grade && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#6A040F]/40 border border-[#D00000]/30 text-xs font-mono text-[#F3F3F4]">
+              <GraduationCap className="w-3.5 h-3.5 text-[#D00000]" />
+              <span>Class {grade}</span>
+            </div>
+          )}
+
           {sessionId && (
             <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded bg-[#2A2A2F] border border-[#35353B] text-xs font-mono text-[#9E9EA7]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#D00000] animate-pulse" />

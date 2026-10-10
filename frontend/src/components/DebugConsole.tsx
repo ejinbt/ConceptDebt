@@ -150,10 +150,21 @@ export function DebugConsole({ session, onStartRepair, onSelectConcept, isRepair
                 )}
 
                 {/* Plain-Language Explanation */}
-                <div className="p-4 rounded-xl bg-[#0E0E10] border border-[#35353B] mb-6">
-                  <p className="text-sm text-[#F3F3F4] leading-relaxed mb-2 font-sans">
+                <div className="p-4 rounded-xl bg-[#0E0E10] border border-[#35353B] mb-6 space-y-3">
+                  <p className="text-sm text-[#F3F3F4] leading-relaxed font-sans">
                     {analysis.explanation.summary}
                   </p>
+                  
+                  {root.ncert && (
+                    <div className="p-3 rounded-lg bg-[#6A040F]/30 border border-[#D00000]/40 flex items-center gap-2.5 text-xs text-[#F3F3F4]">
+                      <span className="w-2 h-2 rounded-full bg-[#D00000] shrink-0" />
+                      <div>
+                        <span className="font-mono text-[#D00000] font-semibold uppercase mr-1.5">REVISE NCERT:</span>
+                        <span className="font-semibold text-white">{root.ncert}</span>
+                      </div>
+                    </div>
+                  )}
+
                   <p className="text-xs text-[#9E9EA7] font-sans">
                     {analysis.explanation.advice}
                   </p>

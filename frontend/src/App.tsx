@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navbar } from "./components/Navbar";
 import { DiagnosticView } from "./components/DiagnosticView";
 import { ScoreView } from "./components/ScoreView";
@@ -7,13 +7,16 @@ import { ConceptGraph } from "./components/ConceptGraph";
 import { RepairView } from "./components/RepairView";
 import { ReverifyView } from "./components/ReverifyView";
 import { useSessionStore } from "./hooks/useSessionStore";
-import { Play, ArrowRight, ShieldAlert, Sparkles, Activity, Layers } from "lucide-react";
+import { Play, ArrowRight, ShieldAlert, Sparkles, Activity, Layers, GraduationCap } from "lucide-react";
 import { api } from "./services/api";
+import type { ClassItem } from "./types/api";
 
 export function App() {
   const { session, setSession, clearSession } = useSessionStore();
   const [loading, setLoading] = useState(false);
   const [label, setLabel] = useState("");
+  const [selectedGrade, setSelectedGrade] = useState<number>(10);
+  const [availableClasses, setAvailableClasses] = useState<ClassItem[]>([]);
   const [resumeId, setResumeId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -25,11 +28,28 @@ export function App() {
 
   const phase = session?.phase || "initial";
 
+  // Fetch available NCERT classes for picker
+  useEffect(() => {
+    api.getClasses()
+      .then(setAvailableClasses)
+      .catch(() => {
+        // Fallback default
+        setAvailableClasses([
+          { grade: 8, label: "Class 8", questions: 12 },
+          { grade: 9, label: "Class 9", questions: 12 },
+          { grade: 10, label: "Class 10", questions: 15 },
+        ]);
+      });
+  }, []);
+
   const handleStartNew = async () => {
     setLoading(true);
     setError(null);
     try {
-      const newSession = await api.createSession(label.trim() || undefined);
+      const newSession = await api.createSession({
+        label: label.trim() || undefined,
+        grade: selectedGrade,
+      });
       setSession(newSession);
       setViewingScore(false);
     } catch (err: unknown) {
@@ -115,7 +135,8 @@ export function App() {
     <div className="min-h-screen bg-[#0E0E10] text-[#F3F3F4] flex flex-col font-sans">
       <Navbar 
         phase={viewingScore ? "diagnostic" : phase} 
-        sessionId={session?.session_id || null} 
+        sessionId={session?.session_id || null}
+        grade={session?.grade}
         onReset={() => {
           clearSession();
           setViewingScore(false);
@@ -136,7 +157,7 @@ export function App() {
           <div className="max-w-3xl mx-auto w-full text-center py-6">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#2A2A2F] border border-[#35353B] text-xs font-mono text-[#9E9EA7] mb-6">
               <span className="w-2 h-2 rounded-full bg-[#D00000] animate-pulse" />
-              <span>DIAGNOSTIC INSTRUMENTATION</span>
+              <span>NCERT CURRICULUM DIAGNOSTICS</span>
             </div>
 
             <h1 className="text-5xl sm:text-7xl font-display font-bold tracking-tight text-[#F3F3F4] mb-6">
@@ -146,24 +167,52 @@ export function App() {
               </span>
             </h1>
 
-            <p className="text-base sm:text-lg text-[#9E9EA7] max-w-xl mx-auto mb-10 leading-relaxed font-sans">
+            <p className="text-base sm:text-lg text-[#9E9EA7] max-w-xl mx-auto mb-8 leading-relaxed font-sans">
               Traditional scores only report symptoms. We trace cascading errors backwards through the mathematics prerequisite graph to expose the foundational bug.
             </p>
 
             {/* Quick Actions Grid */}
             <div className="grid sm:grid-cols-2 gap-4 max-w-xl mx-auto text-left mb-8">
-              {/* Start Card */}
+              {/* Start Card with Class Picker */}
               <div className="p-6 rounded-2xl bg-[#2A2A2F] border border-[#35353B] hover:border-[#6A040F] transition-all flex flex-col justify-between">
                 <div>
                   <div className="w-10 h-10 rounded-xl bg-[#0E0E10] border border-[#35353B] flex items-center justify-center mb-4">
-                    <Play className="w-5 h-5 text-[#F3F3F4]" />
+                    <GraduationCap className="w-5 h-5 text-[#F3F3F4]" />
                   </div>
                   <h3 className="font-display font-semibold text-lg text-[#F3F3F4] mb-1">
                     Start Diagnostic
                   </h3>
                   <p className="text-xs text-[#9E9EA7] mb-4">
-                    13 foundational algebra problems to benchmark and isolate misconceptions.
+                    Select your NCERT class to test aligned curriculum concepts.
                   </p>
+
+                  {/* NCERT Class Picker Button Group */}
+                  <div className="mb-4">
+                    <label className="block text-[11px] font-mono text-[#9E9EA7] uppercase mb-1.5">
+                      Select Class / Grade
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-[#0E0E10] border border-[#35353B]">
+                      {(availableClasses.length > 0 ? availableClasses : [
+                        { grade: 8, label: "Class 8", questions: 12 },
+                        { grade: 9, label: "Class 9", questions: 12 },
+                        { grade: 10, label: "Class 10", questions: 15 },
+                      ]).map((item) => (
+                        <button
+                          key={item.grade}
+                          type="button"
+                          onClick={() => setSelectedGrade(item.grade)}
+                          className={`py-1.5 rounded-lg text-xs font-mono font-semibold transition-all ${
+                            selectedGrade === item.grade
+                              ? "bg-[#6A040F] text-[#F3F3F4] border border-[#D00000]/40 shadow-sm"
+                              : "text-[#9E9EA7] hover:text-[#F3F3F4]"
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <input
                     type="text"
                     value={label}
@@ -177,7 +226,7 @@ export function App() {
                   onClick={handleStartNew}
                   className="w-full py-2.5 rounded-lg bg-[#F3F3F4] hover:bg-white text-[#0E0E10] font-semibold text-xs tracking-wider uppercase transition-colors flex items-center justify-center gap-2"
                 >
-                  <span>{loading ? "Starting..." : "Begin Diagnostic"}</span>
+                  <span>{loading ? "Starting..." : `Begin Class ${selectedGrade} Test`}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -195,7 +244,7 @@ export function App() {
                     Load Demo Student
                   </h3>
                   <p className="text-xs text-[#9E9EA7] mb-4">
-                    Instant pre-answered session (Alex, 46% symptom). Jump straight into root cause isolation and graph.
+                    Pre-answered Class 10 session (Alex, 46% symptom). Jump straight into root cause isolation and graph.
                   </p>
                 </div>
                 <button
@@ -279,9 +328,12 @@ export function App() {
                 </button>
               </div>
 
-              <span className="text-xs font-mono text-[#9E9EA7] hidden sm:inline">
-                SESSION: {session!.session_id.slice(0, 8)}...
-              </span>
+              <div className="flex items-center gap-3 text-xs font-mono text-[#9E9EA7]">
+                {session?.grade && <span>CLASS {session.grade}</span>}
+                <span className="hidden sm:inline">
+                  SESSION: {session!.session_id.slice(0, 8)}...
+                </span>
+              </div>
             </div>
 
             {graphTab === "console" ? (
@@ -333,7 +385,7 @@ export function App() {
       </main>
 
       <footer className="border-t border-[#35353B] py-4 text-center text-xs text-[#9E9EA7]">
-        <span>Concept Debt · Diagnostic Engine & Knowledge Graph</span>
+        <span>Concept Debt · NCERT Mathematics Diagnostic Engine & Knowledge Graph</span>
       </footer>
     </div>
   );

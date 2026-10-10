@@ -9,7 +9,9 @@ import {
   Loader2, 
   FileText,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  BookOpen,
+  HelpCircle as QuestionIcon
 } from "lucide-react";
 import { api } from "../services/api";
 import { MathRenderer } from "./MathRenderer";
@@ -24,7 +26,7 @@ interface DiagnosticViewProps {
 export function DiagnosticView({ session, onComplete }: DiagnosticViewProps) {
   const [questions, setQuestions] = useState<QuestionOut[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, { answer: string; working: string }>>({});
+  const [answers, setAnswers] = useState<Record<string, { answer: string; working: string; notLearned?: boolean }>>({});
   const [attemptResults, setAttemptResults] = useState<Record<string, AttemptOut>>({});
   
   const [currentAnswer, setCurrentAnswer] = useState("");
@@ -33,13 +35,14 @@ export function DiagnosticView({ session, onComplete }: DiagnosticViewProps) {
   
   const [loadingQuestions, setLoadingQuestions] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [markingNotLearned, setMarkingNotLearned] = useState(false);
   const [invalidNotice, setInvalidNotice] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Fetch the 13 diagnostic questions on mount
+  // Fetch class-specific diagnostic questions for this session
   useEffect(() => {
     let mounted = true;
-    api.getDiagnostic()
+    api.getDiagnostic(session.session_id)
       .then((data) => {
         if (mounted) {
           setQuestions(data);
@@ -55,7 +58,7 @@ export function DiagnosticView({ session, onComplete }: DiagnosticViewProps) {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [session.session_id]);
 
   // Update input fields whenever current index changes
   const activeQuestion = questions[currentIndex];
@@ -73,7 +76,9 @@ export function DiagnosticView({ session, onComplete }: DiagnosticViewProps) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <Loader2 className="w-8 h-8 text-[#D00000] animate-spin mb-4" />
-        <p className="text-sm font-mono text-[#9E9EA7]">RETRIEVING 13 DIAGNOSTIC BENCHMARKS...</p>
+        <p className="text-sm font-mono text-[#9E9EA7]">
+          RETRIEVING {session.grade ? `CLASS ${session.grade}` : "CLASS 10"} DIAGNOSTIC BENCHMARKS...
+        </p>
       </div>
     );
   }
@@ -96,7 +101,7 @@ export function DiagnosticView({ session, onComplete }: DiagnosticViewProps) {
 
   const handleSubmitAttempt = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!currentAnswer.trim() || submitting) return;
+    if (!currentAnswer.trim() || submitting || markingNotLearned) return;
 
     setSubmitting(true);
     setInvalidNotice(null);
@@ -116,10 +121,9 @@ export function DiagnosticView({ session, onComplete }: DiagnosticViewProps) {
         return;
       }
 
-      // Save answer locally
       setAnswers((prev) => ({
         ...prev,
-        [activeQuestion.id]: { answer: currentAnswer.trim(), working: currentWorking.trim() },
+        [activeQuestion.id]: { answer: currentAnswer.trim(), working: currentWorking.trim(), notLearned: false },
       }));
 
       setAttemptResults((prev) => ({
@@ -127,7 +131,6 @@ export function DiagnosticView({ session, onComplete }: DiagnosticViewProps) {
         [activeQuestion.id]: res,
       }));
 
-      // If more questions exist, proceed to next; otherwise finish
       if (currentIndex < questions.length - 1) {
         setCurrentIndex((prev) => prev + 1);
       }
@@ -138,22 +141,59 @@ export function DiagnosticView({ session, onComplete }: DiagnosticViewProps) {
     }
   };
 
+  // "Haven't learned this yet" handler
+  const handleNotLearnedYet = async () => {
+    if (submitting || markingNotLearned) return;
+    setMarkingNotLearned(true);
+    setInvalidNotice(null);
+
+    try {
+      const res = await api.submitAttempt({
+        session_id: session.session_id,
+        question_id: activeQuestion.id,
+        not_learned: true,
+      });
+
+      setAnswers((prev) => ({
+        ...prev,
+        [activeQuestion.id]: { answer: "", working: "", notLearned: true },
+      }));
+
+      setAttemptResults((prev) => ({
+        ...prev,
+        [activeQuestion.id]: res,
+      }));
+
+      if (currentIndex < questions.length - 1) {
+        setCurrentIndex((prev) => prev + 1);
+      }
+    } catch (err: unknown) {
+      setInvalidNotice(err instanceof Error ? err.message : "Error recording response");
+    } finally {
+      setMarkingNotLearned(false);
+    }
+  };
+
   const answeredCount = Object.keys(answers).length;
   const isLastQuestion = currentIndex === questions.length - 1;
-  const hasAnsweredCurrent = !!answers[activeQuestion.id];
+  const currentRecord = answers[activeQuestion.id];
+  const hasAnsweredCurrent = !!currentRecord;
+  const isCurrentNotLearned = !!currentRecord?.notLearned;
 
   return (
     <div className="max-w-4xl mx-auto w-full py-4">
       {/* Question Tracker Pill Bar */}
       <div className="mb-6">
         <div className="flex items-center justify-between text-xs font-mono text-[#9E9EA7] mb-3">
-          <span>DIAGNOSTIC PROGRESS</span>
+          <span>{session.grade ? `CLASS ${session.grade} DIAGNOSTIC` : "DIAGNOSTIC PROGRESS"}</span>
           <span>{answeredCount} / {questions.length} ANSWERED</span>
         </div>
         
         <div className="flex flex-wrap gap-1.5 p-2 rounded-xl bg-[#2A2A2F] border border-[#35353B]">
           {questions.map((q, idx) => {
-            const isAnswered = !!answers[q.id];
+            const ans = answers[q.id];
+            const isAnswered = !!ans;
+            const isNotLearned = !!ans?.notLearned;
             const isCurrent = idx === currentIndex;
             return (
               <button
@@ -162,6 +202,8 @@ export function DiagnosticView({ session, onComplete }: DiagnosticViewProps) {
                 className={`flex-1 min-w-[34px] h-9 rounded-lg font-mono text-xs flex items-center justify-center transition-all ${
                   isCurrent
                     ? "bg-[#D00000] text-[#F3F3F4] font-bold ring-2 ring-[#D00000]/40 shadow-sm"
+                    : isNotLearned
+                    ? "bg-[#35353B] text-[#9E9EA7] border border-dashed border-[#5B6275]"
                     : isAnswered
                     ? "bg-[#6A040F]/60 text-[#F3F3F4] border border-[#D00000]/30 hover:bg-[#6A040F]"
                     : "bg-[#0E0E10] text-[#9E9EA7] hover:bg-[#35353B]"
@@ -176,13 +218,21 @@ export function DiagnosticView({ session, onComplete }: DiagnosticViewProps) {
 
       {/* Main Question Card */}
       <div className="rounded-2xl bg-[#2A2A2F] border border-[#35353B] overflow-hidden shadow-2xl">
-        {/* Card Header */}
-        <div className="px-6 py-4 border-b border-[#35353B] flex items-center justify-between bg-[#1A1A1E]">
-          <div className="flex items-center gap-2">
+        {/* Card Header with NCERT badge */}
+        <div className="px-6 py-4 border-b border-[#35353B] flex flex-wrap items-center justify-between gap-3 bg-[#1A1A1E]">
+          <div className="flex items-center flex-wrap gap-2">
             <span className="px-2.5 py-0.5 rounded-full bg-[#6A040F] text-[11px] font-mono tracking-wider text-[#F3F3F4] uppercase">
               {activeQuestion.concept_name}
             </span>
-            <span className="text-xs text-[#9E9EA7] font-mono">
+
+            {activeQuestion.ncert && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#0E0E10] border border-[#35353B] text-[11px] font-mono text-[#F3F3F4]">
+                <BookOpen className="w-3 h-3 text-[#D00000]" />
+                <span>{activeQuestion.ncert}</span>
+              </span>
+            )}
+
+            <span className="text-xs text-[#9E9EA7] font-mono hidden sm:inline">
               [Kind: {activeQuestion.kind}]
             </span>
           </div>
@@ -219,9 +269,15 @@ export function DiagnosticView({ session, onComplete }: DiagnosticViewProps) {
                   className="w-full bg-[#0E0E10] border border-[#35353B] focus:border-[#D00000] rounded-xl px-4 py-3.5 text-lg font-mono text-[#F3F3F4] placeholder:text-[#5B6275] focus:outline-none transition-all"
                 />
                 {hasAnsweredCurrent && (
-                  <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs text-emerald-400 font-mono">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Saved</span>
+                  <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs font-mono">
+                    {isCurrentNotLearned ? (
+                      <span className="text-amber-400">Marked as unlearned</span>
+                    ) : (
+                      <span className="text-emerald-400 flex items-center gap-1">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Saved</span>
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
@@ -264,18 +320,36 @@ export function DiagnosticView({ session, onComplete }: DiagnosticViewProps) {
             )}
 
             {/* Navigation & Submission Controls */}
-            <div className="pt-6 border-t border-[#35353B] flex items-center justify-between gap-4">
-              <button
-                type="button"
-                onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
-                disabled={currentIndex === 0}
-                className="px-4 py-2.5 rounded-xl bg-[#0E0E10] hover:bg-[#35353B] text-xs font-semibold text-[#F3F3F4] transition-colors disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1.5"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span>Previous</span>
-              </button>
+            <div className="pt-6 border-t border-[#35353B] flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
+                  disabled={currentIndex === 0}
+                  className="px-4 py-2.5 rounded-xl bg-[#0E0E10] hover:bg-[#35353B] text-xs font-semibold text-[#F3F3F4] transition-colors disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1.5"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span>Previous</span>
+                </button>
 
-              <div className="flex items-center gap-3">
+                {/* "Haven't learned this yet" button */}
+                <button
+                  type="button"
+                  onClick={handleNotLearnedYet}
+                  disabled={markingNotLearned || submitting}
+                  className="px-3.5 py-2.5 rounded-xl bg-[#0E0E10] hover:bg-[#2A2A2F] border border-[#35353B] text-xs font-mono text-[#9E9EA7] hover:text-[#F3F3F4] transition-colors flex items-center gap-1.5"
+                  title="Marks topic as not covered yet without counting as a mistake"
+                >
+                  {markingNotLearned ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+                  )}
+                  <span>Haven't learned this yet</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
                 {currentIndex < questions.length - 1 && (
                   <button
                     type="button"
@@ -289,7 +363,7 @@ export function DiagnosticView({ session, onComplete }: DiagnosticViewProps) {
 
                 <button
                   type="submit"
-                  disabled={submitting || !currentAnswer.trim()}
+                  disabled={submitting || markingNotLearned || !currentAnswer.trim()}
                   className="px-6 py-2.5 rounded-xl bg-[#6A040F] hover:bg-[#D00000] text-xs font-semibold text-[#F3F3F4] tracking-wider uppercase transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-[#6A040F]/20"
                 >
                   {submitting ? (
@@ -300,7 +374,7 @@ export function DiagnosticView({ session, onComplete }: DiagnosticViewProps) {
                   ) : (
                     <>
                       <Send className="w-3.5 h-3.5" />
-                      <span>{hasAnsweredCurrent ? "Update Answer" : "Submit Answer"}</span>
+                      <span>{hasAnsweredCurrent && !isCurrentNotLearned ? "Update Answer" : "Submit Answer"}</span>
                     </>
                   )}
                 </button>

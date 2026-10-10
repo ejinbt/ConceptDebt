@@ -9,6 +9,7 @@ import type {
   ReverifyOut,
   GraphData,
   HealthOut,
+  ClassItem,
 } from "../types/api";
 
 const API_BASE = import.meta.env.VITE_API_URL || "https://api.94.249.197.142.sslip.io/api";
@@ -52,11 +53,14 @@ export const api = {
   // Health
   getHealth: () => request<HealthOut>("/health"),
 
+  // NCERT Classes
+  getClasses: () => request<ClassItem[]>("/classes"),
+
   // Sessions
-  createSession: (label?: string) =>
+  createSession: (payload?: { label?: string; grade?: number }) =>
     request<SessionOut>("/sessions", {
       method: "POST",
-      body: JSON.stringify(label ? { label } : {}),
+      body: JSON.stringify(payload || {}),
     }),
 
   getSession: (sessionId: string) =>
@@ -67,8 +71,9 @@ export const api = {
       method: "POST",
     }),
 
-  // Diagnostic
-  getDiagnostic: () => request<QuestionOut[]>("/diagnostic"),
+  // Diagnostic (accepts optional session_id to get class-specific questions)
+  getDiagnostic: (sessionId?: string) =>
+    request<QuestionOut[]>(sessionId ? `/diagnostic?session_id=${sessionId}` : "/diagnostic"),
 
   // Attempts (for both diagnostic and repair)
   submitAttempt: (payload: AttemptIn) =>

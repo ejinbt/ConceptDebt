@@ -11,7 +11,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { api } from "../services/api";
-import { Loader2, Layers } from "lucide-react";
+import { Loader2, Layers, Lock, BookOpen } from "lucide-react";
 import type { GraphData, Status } from "../types/api";
 
 // Custom styled Concept Node component adhering to design tokens
@@ -21,6 +21,8 @@ interface ConceptNodeData extends Record<string, unknown> {
   status: Status;
   description: string;
   level: number;
+  grade?: number;
+  ncert?: string;
   id: string;
 }
 
@@ -29,12 +31,17 @@ function ConceptCustomNode({ data, selected }: NodeProps<Node<ConceptNodeData>>)
   const isTrace = data.status === "trace";
   const isFailed = data.status === "failed";
   const isAtRisk = data.status === "at_risk";
+  const isLocked = data.status === "locked";
 
   let borderStyle = "border-[#35353B]";
   let bgStyle = "bg-[#1A1A1E]";
   let badgeColor = "text-[#9E9EA7]";
 
-  if (isRoot) {
+  if (isLocked) {
+    borderStyle = "border-[#2A2A2F] border-dashed opacity-50";
+    bgStyle = "bg-[#141416]";
+    badgeColor = "text-[#5B6275]";
+  } else if (isRoot) {
     borderStyle = "border-[#D00000] ring-2 ring-[#D00000]/30 shadow-lg shadow-[#D00000]/20";
     bgStyle = "bg-[#6A040F]";
     badgeColor = "text-[#F3F3F4]";
@@ -56,28 +63,37 @@ function ConceptCustomNode({ data, selected }: NodeProps<Node<ConceptNodeData>>)
     <div
       className={`px-3.5 py-2.5 rounded-xl border ${borderStyle} ${bgStyle} ${
         selected ? "ring-2 ring-white" : ""
-      } min-w-[180px] max-w-[220px] transition-all text-left shadow-md`}
+      } min-w-[180px] max-w-[220px] transition-all text-left shadow-md relative`}
     >
       <Handle type="target" position={Position.Left} className="!bg-[#D00000] !w-2 !h-2 !border-none" />
 
       <div className="flex items-center justify-between mb-1 gap-2">
-        <span className="text-[9px] font-mono tracking-wider uppercase text-[#9E9EA7]">
-          LVL {data.level}
+        <span className="text-[9px] font-mono tracking-wider uppercase text-[#9E9EA7] flex items-center gap-1">
+          {isLocked && <Lock className="w-2.5 h-2.5 text-[#5B6275]" />}
+          <span>LVL {data.level}</span>
+          {data.grade && <span>· C{data.grade}</span>}
         </span>
-        {data.debt >= 1 && (
+        {data.debt >= 1 && !isLocked && (
           <span className={`text-[10px] font-mono font-bold ${badgeColor}`}>
             {Math.round(data.debt)}% debt
           </span>
         )}
       </div>
 
-      <div className="font-display font-semibold text-xs text-[#F3F3F4] leading-tight">
+      <div className={`font-display font-semibold text-xs leading-tight ${isLocked ? "text-[#9E9EA7]" : "text-[#F3F3F4]"}`}>
         {data.label}
       </div>
 
       {isRoot && (
         <div className="mt-1.5 text-[9px] font-mono tracking-widest uppercase text-white font-bold bg-[#D00000] px-1.5 py-0.5 rounded text-center">
           ROOT CAUSE
+        </div>
+      )}
+
+      {isLocked && (
+        <div className="mt-1.5 text-[8px] font-mono tracking-wider uppercase text-[#5B6275] bg-[#0E0E10] px-1.5 py-0.5 rounded text-center flex items-center justify-center gap-1">
+          <Lock className="w-2 h-2" />
+          <span>Higher Class</span>
         </div>
       )}
 
@@ -114,6 +130,8 @@ export function ConceptGraph({ sessionId, onSelectNode }: ConceptGraphProps) {
               status: rootNode.status,
               description: rootNode.description,
               level: rootNode.level,
+              grade: rootNode.grade,
+              ncert: rootNode.ncert,
             });
           }
         }
@@ -145,6 +163,8 @@ export function ConceptGraph({ sessionId, onSelectNode }: ConceptGraphProps) {
           status: n.status,
           description: n.description,
           level: n.level,
+          grade: n.grade,
+          ncert: n.ncert,
         },
       };
     });
@@ -156,14 +176,17 @@ export function ConceptGraph({ sessionId, onSelectNode }: ConceptGraphProps) {
         (sourceNode?.status === "root" || sourceNode?.status === "trace") &&
         (targetNode?.status === "trace" || targetNode?.status === "failed");
 
+      const isLockedPath = sourceNode?.status === "locked" || targetNode?.status === "locked";
+
       return {
         id: e.id,
         source: e.source,
         target: e.target,
         animated: isTracePath,
         style: {
-          stroke: isTracePath ? "#D00000" : "#35353B",
+          stroke: isTracePath ? "#D00000" : isLockedPath ? "#2A2A2F" : "#35353B",
           strokeWidth: isTracePath ? 2.5 : 1,
+          strokeDasharray: isLockedPath ? "4 4" : undefined,
         },
       };
     });
@@ -183,7 +206,7 @@ export function ConceptGraph({ sessionId, onSelectNode }: ConceptGraphProps) {
   return (
     <div className="rounded-3xl bg-[#2A2A2F] border border-[#35353B] overflow-hidden flex flex-col shadow-2xl">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-[#35353B] flex items-center justify-between bg-[#1A1A1E]">
+      <div className="px-6 py-4 border-b border-[#35353B] flex flex-wrap items-center justify-between gap-3 bg-[#1A1A1E]">
         <div className="flex items-center gap-3">
           <Layers className="w-4 h-4 text-[#D00000]" />
           <h3 className="font-display font-semibold text-base text-[#F3F3F4]">
@@ -195,7 +218,7 @@ export function ConceptGraph({ sessionId, onSelectNode }: ConceptGraphProps) {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-3 text-[11px] font-mono">
+        <div className="flex items-center flex-wrap gap-3 text-[11px] font-mono">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-sm bg-[#D00000]" />
             <span className="text-[#F3F3F4]">Root</span>
@@ -206,7 +229,11 @@ export function ConceptGraph({ sessionId, onSelectNode }: ConceptGraphProps) {
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-sm bg-[#35353B]" />
-            <span className="text-[#9E9EA7]">Clear</span>
+            <span className="text-[#9E9EA7]">Active</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Lock className="w-3 h-3 text-[#5B6275]" />
+            <span className="text-[#5B6275]">Locked</span>
           </div>
         </div>
       </div>
@@ -236,17 +263,27 @@ export function ConceptGraph({ sessionId, onSelectNode }: ConceptGraphProps) {
         {activeInspector && (
           <div className="absolute bottom-4 right-4 max-w-xs w-full p-4 rounded-2xl bg-[#2A2A2F]/95 backdrop-blur-md border border-[#35353B] shadow-2xl text-left">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#9E9EA7]">
-                Level {activeInspector.level} Concept
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#9E9EA7] flex items-center gap-1">
+                {activeInspector.status === "locked" && <Lock className="w-2.5 h-2.5 text-[#5B6275]" />}
+                <span>Level {activeInspector.level} Concept</span>
               </span>
-              <span className="text-xs font-mono font-bold text-[#D00000]">
-                {Math.round(activeInspector.debt)}% debt
-              </span>
+              {activeInspector.status !== "locked" && (
+                <span className="text-xs font-mono font-bold text-[#D00000]">
+                  {Math.round(activeInspector.debt)}% debt
+                </span>
+              )}
             </div>
 
             <h4 className="font-display font-bold text-sm text-[#F3F3F4] mb-1">
               {activeInspector.label}
             </h4>
+
+            {activeInspector.ncert && (
+              <div className="inline-flex items-center gap-1 text-[11px] font-mono text-amber-400 mb-2">
+                <BookOpen className="w-3 h-3" />
+                <span>{activeInspector.ncert}</span>
+              </div>
+            )}
 
             <p className="text-xs text-[#9E9EA7] leading-relaxed font-sans mb-3">
               {activeInspector.description}

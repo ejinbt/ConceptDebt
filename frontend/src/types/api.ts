@@ -1,10 +1,17 @@
 export type Phase = "diagnostic" | "debugged" | "repair" | "done";
-export type Status = "root" | "trace" | "failed" | "at_risk" | "ok";
+export type Status = "root" | "trace" | "failed" | "at_risk" | "ok" | "locked";
 export type Kind = "number" | "expression" | "factored";
+
+export interface ClassItem {
+  grade: number;
+  label: string;
+  questions: number;
+}
 
 export interface SessionOut {
   session_id: string;
   label: string | null;
+  grade?: number;
   phase: Phase;
   root_concept_id: string | null;
   answered: number;
@@ -15,6 +22,7 @@ export interface QuestionOut {
   id: string;
   concept_id: string;
   concept_name: string;
+  ncert?: string;
   kind: Kind;
   prompt: string;
   is_repair: boolean;
@@ -23,9 +31,10 @@ export interface QuestionOut {
 export interface AttemptIn {
   session_id: string;
   question_id: string;
-  answer: string;
+  answer?: string;
   working?: string | null;
   time_ms?: number | null;
+  not_learned?: boolean;
 }
 
 export interface MisconceptionRef {
@@ -47,7 +56,7 @@ export interface AttemptOut {
   correct_answer: string;
   misconception: MisconceptionRef | null;
   confidence: number;
-  source: "rule" | "ai" | "unclassified" | "correct" | "invalid";
+  source: "rule" | "ai" | "unclassified" | "correct" | "invalid" | "not_learned";
   rationale: string | null;
 }
 
@@ -62,6 +71,7 @@ export interface ScoreOut {
 export interface ConceptDebt {
   concept_id: string;
   name: string;
+  ncert?: string;
   level: number;
   debt: number;
   mistakes: number;
@@ -75,6 +85,7 @@ export interface ConceptDebt {
 export interface Root {
   concept_id: string;
   name: string;
+  ncert?: string;
   debt: number;
   confidence: number;
   coverage: number;
@@ -133,6 +144,8 @@ export interface GraphNode {
   id: string;
   name: string;
   level: number;
+  grade?: number;
+  ncert?: string;
   description: string;
   debt: number;
   status: Status;
