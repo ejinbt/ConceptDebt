@@ -151,7 +151,7 @@ export function DiagnosticView({ session, onComplete }: DiagnosticViewProps) {
           <span>{answeredCount} / {questions.length} ANSWERED</span>
         </div>
         
-        <div className="grid grid-cols-13 gap-1.5 p-2 rounded-xl bg-[#2A2A2F] border border-[#35353B]">
+        <div className="flex flex-wrap gap-1.5 p-2 rounded-xl bg-[#2A2A2F] border border-[#35353B]">
           {questions.map((q, idx) => {
             const isAnswered = !!answers[q.id];
             const isCurrent = idx === currentIndex;
@@ -159,7 +159,7 @@ export function DiagnosticView({ session, onComplete }: DiagnosticViewProps) {
               <button
                 key={q.id}
                 onClick={() => setCurrentIndex(idx)}
-                className={`h-9 rounded-lg font-mono text-xs flex items-center justify-center transition-all ${
+                className={`flex-1 min-w-[34px] h-9 rounded-lg font-mono text-xs flex items-center justify-center transition-all ${
                   isCurrent
                     ? "bg-[#D00000] text-[#F3F3F4] font-bold ring-2 ring-[#D00000]/40 shadow-sm"
                     : isAnswered
