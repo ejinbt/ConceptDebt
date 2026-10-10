@@ -18,6 +18,7 @@ import type { Analysis, SessionOut, ConceptDebt } from "../types/api";
 interface DebugConsoleProps {
   session: SessionOut;
   initialAnalysis?: Analysis | null;
+  readOnlyDebt?: boolean;
   onStartRepair: () => void;
   onBackToScore?: () => void;
   onSelectConcept?: (conceptId: string) => void;
@@ -27,6 +28,7 @@ interface DebugConsoleProps {
 export function DebugConsole({
   session,
   initialAnalysis,
+  readOnlyDebt = false,
   onStartRepair,
   onBackToScore,
   onSelectConcept,
@@ -43,13 +45,16 @@ export function DebugConsole({
     setLoading(true);
     setError(null);
     try {
-      const data = await api.runDebug(session.session_id);
+      // If inspecting post-repair, call fast read-only GET /debt instead of expensive POST /debug
+      const data = readOnlyDebt 
+        ? await api.getDebt(session.session_id)
+        : await api.runDebug(session.session_id);
       setAnalysis(data);
       if (data.root) {
         setSelectedConceptId(data.root.concept_id);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to run root cause analysis");
+      setError(err instanceof Error ? err.message : "Failed to load concept debt data");
     } finally {
       setLoading(false);
     }

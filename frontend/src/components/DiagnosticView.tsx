@@ -40,15 +40,42 @@ export function DiagnosticView({ session, onComplete, onExitTest }: DiagnosticVi
   const [invalidNotice, setInvalidNotice] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Fetch class-specific diagnostic questions for this session
+  // Fetch class-specific diagnostic questions and past attempts for this session
   useEffect(() => {
     let mounted = true;
-    api.getDiagnostic(session.session_id)
-      .then((data) => {
-        if (mounted) {
-          setQuestions(data);
-          setLoadingQuestions(false);
+    Promise.all([
+      api.getDiagnostic(session.session_id),
+      api.getAttempts(session.session_id).catch(() => []),
+    ])
+      .then(([questionList, existingAttempts]) => {
+        if (!mounted) return;
+        setQuestions(questionList);
+
+        // Pre-populate answers from server if the user refreshed or resumed
+        if (existingAttempts && existingAttempts.length > 0) {
+          const loadedAnswers: Record<string, { answer: string; working: string; notLearned?: boolean }> = {};
+          const loadedResults: Record<string, AttemptOut> = {};
+
+          existingAttempts.forEach((att) => {
+            loadedAnswers[att.question_id] = {
+              answer: att.answer || "",
+              working: att.working || "",
+              notLearned: att.source === "not_learned",
+            };
+            loadedResults[att.question_id] = att;
+          });
+
+          setAnswers(loadedAnswers);
+          setAttemptResults(loadedResults);
+
+          // Find first unanswered question index
+          const firstUnanswered = questionList.findIndex((q) => !loadedAnswers[q.id]);
+          if (firstUnanswered !== -1) {
+            setCurrentIndex(firstUnanswered);
+          }
         }
+
+        setLoadingQuestions(false);
       })
       .catch((err) => {
         if (mounted) {
@@ -56,6 +83,7 @@ export function DiagnosticView({ session, onComplete, onExitTest }: DiagnosticVi
           setLoadingQuestions(false);
         }
       });
+
     return () => {
       mounted = false;
     };

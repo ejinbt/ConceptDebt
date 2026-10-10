@@ -13,7 +13,7 @@ import { api } from "./services/api";
 import type { ClassItem } from "./types/api";
 
 export function App() {
-  const { session, setSession, clearSession } = useSessionStore();
+  const { session, setSession, savedView, updateView, clearSession } = useSessionStore();
   const [loading, setLoading] = useState(false);
   const [label, setLabel] = useState("");
   const [selectedGrade, setSelectedGrade] = useState<number>(10);
@@ -21,17 +21,15 @@ export function App() {
   const [resumeId, setResumeId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Decoupled Nav State: tracks which screen the user is currently looking at
-  const [currentView, setCurrentView] = useState<NavView>(() => {
-    if (!session) return "initial";
-    if (session.phase === "debugged") return "debugged";
-    if (session.phase === "repair") return "repair";
-    if (session.phase === "done") return "done";
-    return session.answered >= 5 ? "score" : "diagnostic";
-  });
+  // Use savedView from store (persisted in localStorage)
+  const currentView = savedView;
+  const setCurrentView = (view: NavView) => {
+    updateView(view);
+  };
 
   const [isDebugging, setIsDebugging] = useState(false);
   const [cachedAnalysis, setCachedAnalysis] = useState<import("./types/api").Analysis | null>(null);
+  const [useReadOnlyDebt, setUseReadOnlyDebt] = useState(false);
   const [isRepairing, setIsRepairing] = useState(false);
   const [graphTab, setGraphTab] = useState<"console" | "graph">("console");
 
@@ -112,6 +110,7 @@ export function App() {
   const handleDebugLearning = async () => {
     if (!session) return;
     setIsDebugging(true);
+    setUseReadOnlyDebt(false);
     setError(null);
     try {
       const analysisData = await api.runDebug(session.session_id);
@@ -126,31 +125,23 @@ export function App() {
     }
   };
 
-  const handleStartRepair = async () => {
+  const handleStartRepair = () => {
     if (!session) return;
-    setIsRepairing(true);
-    try {
-      await api.startRepair(session.session_id, 3);
-      const updated = await api.getSession(session.session_id);
-      setSession(updated);
-      setCurrentView("repair");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to start repair");
-    } finally {
-      setIsRepairing(false);
-    }
+    // Switch to repair view directly without making a duplicate API call; RepairView handles fetching drills
+    setCurrentView("repair");
   };
 
-  const handleFinishRepair = async () => {
+  const handleFinishRepair = () => {
     if (!session) return;
-    try {
-      await api.reverify(session.session_id);
-      const updated = await api.getSession(session.session_id);
-      setSession(updated);
-      setCurrentView("done");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to reverify");
-    }
+    // Switch to reverify view directly without making a duplicate API call; ReverifyView handles reverify
+    setCurrentView("done");
+  };
+
+  const handleInspectDebugger = () => {
+    // When inspecting debugger after repair, tell DebugConsole to use fast read-only GET /debt
+    setUseReadOnlyDebt(true);
+    setCachedAnalysis(null);
+    setCurrentView("debugged");
   };
 
   const handleGoHome = () => {
@@ -414,6 +405,7 @@ export function App() {
               <DebugConsole
                 session={session}
                 initialAnalysis={cachedAnalysis}
+                readOnlyDebt={useReadOnlyDebt}
                 onStartRepair={handleStartRepair}
                 onBackToScore={() => setCurrentView("score")}
                 isRepairing={isRepairing}
@@ -448,7 +440,7 @@ export function App() {
           <ReverifyView
             session={session}
             onNewSession={() => setConfirmResetOpen(true)}
-            onInspectDebugger={() => setCurrentView("debugged")}
+            onInspectDebugger={handleInspectDebugger}
           />
         )}
       </main>

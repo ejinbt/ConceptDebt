@@ -57,11 +57,14 @@ export function RepairView({ session, onFinishRepair, onBackToDebugger }: Repair
     setFeedback(null);
   }, [currentIndex]);
 
+  const [invalidNotice, setInvalidNotice] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentAnswer.trim() || !activeQuestion || submitting) return;
 
     setSubmitting(true);
+    setInvalidNotice(null);
     try {
       const res = await api.submitAttempt({
         session_id: session.session_id,
@@ -69,10 +72,17 @@ export function RepairView({ session, onFinishRepair, onBackToDebugger }: Repair
         answer: currentAnswer.trim(),
       });
 
+      // Handle unparseable typo (source: "invalid") without locking or penalizing
+      if (res.source === "invalid") {
+        setInvalidNotice("The math engine could not parse this format. Please re-enter your answer (e.g. 4x + 20, -3x - 6). It will not count against you.");
+        setSubmitting(false);
+        return;
+      }
+
       setResults((prev) => ({ ...prev, [activeQuestion.id]: res }));
       setFeedback(res);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Error submitting repair attempt");
+      setInvalidNotice(err instanceof Error ? err.message : "Error submitting repair attempt");
     } finally {
       setSubmitting(false);
     }
@@ -167,6 +177,14 @@ export function RepairView({ session, onFinishRepair, onBackToDebugger }: Repair
               className="w-full bg-[#0E0E10] border border-[#35353B] focus:border-[#D00000] rounded-xl px-4 py-3.5 text-lg font-mono text-[#F3F3F4] focus:outline-none transition-all disabled:opacity-60"
             />
           </div>
+
+          {/* Invalid Expression Notice */}
+          {invalidNotice && (
+            <div className="p-3.5 rounded-xl bg-[#6A040F]/30 border border-[#D00000] flex items-start gap-2.5 text-xs text-[#F3F3F4]">
+              <HelpCircle className="w-4 h-4 text-[#D00000] shrink-0 mt-0.5" />
+              <span>{invalidNotice}</span>
+            </div>
+          )}
 
           {/* Feedback Display */}
           {feedback && (

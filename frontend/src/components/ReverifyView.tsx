@@ -71,6 +71,24 @@ export function ReverifyView({ session, onNewSession, onInspectDebugger }: Rever
 
   const rootDrop = reverifyData.root_before - reverifyData.root_after;
 
+  // Dynamic wording based on actual debt results
+  let badgeText = "REGRESSION TEST PASSED · DEBT SIGNIFICANTLY REDUCED";
+  let badgeBorder = "border-emerald-800 text-emerald-300 bg-emerald-950";
+  let headline = "Root Concept Healed";
+
+  if (reverifyData.root_after <= 25 || rootDrop >= 50) {
+    badgeText = "REGRESSION TEST PASSED · DEBT SIGNIFICANTLY REDUCED";
+    headline = "Root Concept Healed";
+  } else if (rootDrop > 0) {
+    badgeText = "PARTIAL RECOVERY · DEBT REDUCED";
+    headline = "Concept Debt Decreased";
+    badgeBorder = "border-amber-800 text-amber-300 bg-amber-950/60";
+  } else {
+    badgeText = "FURTHER PRACTICE RECOMMENDED";
+    headline = "Debt Remains Elevated";
+    badgeBorder = "border-[#6A040F] text-rose-300 bg-[#6A040F]/30";
+  }
+
   return (
     <div className="w-full space-y-6">
       {/* Hero Headline Diff Banner */}
@@ -79,13 +97,13 @@ export function ReverifyView({ session, onNewSession, onInspectDebugger }: Rever
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 text-xs font-mono font-semibold uppercase mb-3">
+            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-mono font-semibold uppercase mb-3 ${badgeBorder}`}>
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span>REGRESSION TEST PASSED · DEBT ELIMINATED</span>
+              <span>{badgeText}</span>
             </div>
 
             <h2 className="text-3xl sm:text-5xl font-display font-bold text-[#F3F3F4] tracking-tight">
-              Root Concept Healed
+              {headline}
             </h2>
 
             <p className="text-xs sm:text-sm text-[#9E9EA7] mt-2 font-mono">

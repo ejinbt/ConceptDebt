@@ -76,6 +76,9 @@ export const api = {
     request<QuestionOut[]>(sessionId ? `/diagnostic?session_id=${sessionId}` : "/diagnostic"),
 
   // Attempts (for both diagnostic and repair)
+  getAttempts: (sessionId: string) =>
+    request<AttemptOut[]>(`/sessions/${sessionId}/attempts`),
+
   submitAttempt: (payload: AttemptIn) =>
     request<AttemptOut>("/attempts", {
       method: "POST",
