@@ -32,9 +32,11 @@ export function Navbar({ phase, sessionId, grade, onReset }: NavbarProps) {
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
         {/* Brand */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#6A040F] border border-[#D00000]/40 flex items-center justify-center">
-            <Activity className="w-4 h-4 text-[#F3F3F4]" />
-          </div>
+          <img 
+            src="/Assets/logo.png" 
+            alt="Concept Debt Logo" 
+            className="w-9 h-9 rounded-lg object-contain bg-[#0E0E10] border border-[#35353B] shadow-sm"
+          />
           <div>
             <span className="font-display font-bold text-lg tracking-wider text-[#F3F3F4]">
               CONCEPT<span className="text-[#D00000]">_DEBT</span>
