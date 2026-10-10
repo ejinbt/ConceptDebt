@@ -240,12 +240,18 @@ def template_explanation(summary: dict) -> dict:
     }
 
 
-def build_analysis(db: Session, session: StudySession, use_ai: bool) -> dict:
+def attempts_fingerprint(db: Session, session_id: str) -> str:
+    """Changes whenever an answer is added or replaced."""
+    ids = [a.id for a in session_attempts(db, session_id)]
+    return f"{len(ids)}:{max(ids, default=0)}"
+
+
+def build_analysis(db: Session, session: StudySession, use_ai: bool, reuse: Optional[dict] = None) -> dict:
     graph, debts, root, attempts = analyse(db, session.id)
     summary = evidence_summary(graph, debts, root, attempts, db)
     summary["student_class"] = session.grade
     meta = concept_meta(db)
-    explanation = (ai.explain(summary) if use_ai else None) or template_explanation(summary)
+    explanation = reuse or (ai.explain(summary) if use_ai else None) or template_explanation(summary)
     root_out = None
     if root:
         d = debts[root.concept_id]

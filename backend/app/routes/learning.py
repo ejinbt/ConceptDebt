@@ -117,12 +117,22 @@ def plain_score(session_id: str, db: Session = Depends(get_db)):
 
 @router.post("/sessions/{session_id}/debug", response_model=AnalysisOut)
 def debug_learning(session_id: str, db: Session = Depends(get_db)):
-    """Run the debt engine, pick the root cause and save a 'before' snapshot."""
+    """Run the debt engine, pick the root cause and save a 'before' snapshot.
+
+    Safe to call repeatedly: if no answers changed since the last call, the saved
+    explanation is reused (no new AI call), and once repair has started the
+    'before' baseline is kept so before/after stays honest."""
     session = services.get_session(db, session_id)
-    services.save_snapshot(db, session_id, "before")
-    analysis = services.build_analysis(db, session, use_ai=True)
+    repair_started = any(a.mode == "repair" for a in services.session_attempts(db, session_id))
+    if not (repair_started and services.snapshot(db, session_id, "before")):
+        services.save_snapshot(db, session_id, "before")
+
+    fingerprint = services.attempts_fingerprint(db, session_id)
+    saved = session.explanation or {}
+    reuse = saved if saved.get("fingerprint") == fingerprint else None
+    analysis = services.build_analysis(db, session, use_ai=True, reuse=reuse)
     session.root_concept_id = analysis["root"]["concept_id"] if analysis["root"] else None
-    session.explanation = analysis["explanation"]
+    session.explanation = {**analysis["explanation"], "fingerprint": fingerprint}
     session.phase = "debugged"
     db.add(session)
     db.commit()

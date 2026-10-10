@@ -90,3 +90,26 @@ def test_gibberish_is_invalid_and_ignored(client):
 def test_health_reports_ai_stats(client):
     h = client.get("/api/health").json()
     assert set(h["ai_stats"]) == {"calls", "ok", "failed", "last_error"}
+
+
+def test_debug_is_safe_to_repeat(client, monkeypatch):
+    from app import ai
+
+    calls = []
+    monkeypatch.setattr(ai, "explain", lambda summary: calls.append(1) or {"summary": "s", "advice": "a", "source": "ai"})
+    sid = client.post("/api/demo/session").json()["session_id"]
+    first = client.post(f"/api/sessions/{sid}/debug").json()
+    for _ in range(3):  # double renders, tab switches
+        again = client.post(f"/api/sessions/{sid}/debug").json()
+    assert len(calls) == 1
+    assert again["explanation"]["source"] == "ai" and again["root"] == first["root"]
+
+    # repair, then open the debugger again: the original baseline must survive
+    for q, ans in zip(client.post(f"/api/sessions/{sid}/repair").json()["questions"], ["4x + 20", "-3x - 6", "10x - 5"]):
+        client.post("/api/attempts", json={"session_id": sid, "question_id": q["id"], "answer": ans})
+    after_repair = client.post(f"/api/sessions/{sid}/debug").json()
+    assert len(calls) == 2  # answers changed, so a fresh explanation
+    assert after_repair["root"]["debt"] < first["root"]["debt"]
+    result = client.post(f"/api/sessions/{sid}/reverify").json()
+    assert result["root_before"] == first["root"]["debt"]
+    assert result["root_after"] < 35
