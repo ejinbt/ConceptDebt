@@ -1,6 +1,10 @@
-# Backend + HTTPS on a VPS.
-#   cp .env.example .env   # set DOMAIN
+# Backend on a VPS.
+#   cp .env.example .env
 #   docker compose up -d --build
+#
+# Default: the API listens on 127.0.0.1:${API_PORT} only, for the web server you
+# already run on 80/443 (nginx, Caddy, ...) to proxy to. See README.md.
+# Nothing on 80/443 yet? Set COMPOSE_PROFILES=caddy in .env to add bundled HTTPS.
 services:
   api:
     build: ../backend
@@ -11,8 +15,8 @@ services:
       DATABASE_URL: sqlite:////data/conceptdebt.db
     volumes:
       - api-data:/data
-    expose:
-      - "8000"
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
       interval: 30s
@@ -20,6 +24,7 @@ services:
       retries: 3
 
   caddy:
+    profiles: ["caddy"]
     image: caddy:2.8.4
     restart: unless-stopped
     depends_on:
@@ -29,7 +34,7 @@ services:
       - "443:443"
       - "443:443/udp"
     environment:
-      DOMAIN: ${DOMAIN:?set DOMAIN in deploy/.env}
+      DOMAIN: ${DOMAIN:-localhost}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

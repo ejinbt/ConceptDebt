@@ -1,30 +1,27 @@
 # Deploy the backend on a VPS
 
-Docker Compose runs two containers:
+Docker Compose runs the FastAPI backend (**api**). SQLite lives on the `api-data` volume.
+The API listens on **`127.0.0.1:8000` only**, so it doesn't clash with other apps.
+HTTPS comes from a web server in front of it:
 
-- **api**: the FastAPI backend. SQLite lives on the `api-data` volume.
-- **caddy**: HTTPS reverse proxy. It gets and renews a Let's Encrypt certificate automatically.
+- **Option A: you already run nginx (or Caddy, etc.) on 80/443.** Add one site
+  that proxies to `127.0.0.1:8000`. Your other apps keep working.
+- **Option B: nothing on 80/443.** Turn on the bundled Caddy container (`COMPOSE_PROFILES=caddy`).
 
 Result: `https://<DOMAIN>/` (tester), `https://<DOMAIN>/docs`, `https://<DOMAIN>/api/...`
 
 No domain? Use **sslip.io**, which resolves `api.<ip>.sslip.io` to `<ip>`:
-`DOMAIN=api.94.249.197.142.sslip.io`
+`api.94.249.197.142.sslip.io`
+
+Not sure what's on 80/443? `sudo ss -tlnp | grep -E ':(80|443) '` and `docker ps`.
 
 ## 1. One-time server setup (Ubuntu / Debian)
 
 ```bash
-# Docker + compose plugin
-curl -fsSL https://get.docker.com | sh
-
-# Firewall: SSH, HTTP (certificate challenge + redirect), HTTPS
-sudo ufw allow OpenSSH
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw allow 443/udp
-sudo ufw enable
+curl -fsSL https://get.docker.com | sh       # skip if Docker is installed
 ```
 
-If your provider has its own firewall panel, open 80 and 443 there too.
+Ports 80 and 443 must be open (they already are if another site works).
 
 ## 2. Get the code
 
@@ -42,24 +39,57 @@ cd ConceptDebt
 cp backend/.env.example backend/.env
 nano backend/.env          # set AI_API_KEY (Featherless) and AI_MODEL
 cp deploy/.env.example deploy/.env
-nano deploy/.env           # DOMAIN=api.94.249.197.142.sslip.io (or your domain)
+nano deploy/.env           # API_PORT (default 8000; change if taken)
 ```
 
 Leave `DATABASE_URL` alone. Compose overrides it to keep the database on the volume.
 
-If you use a real domain, point an **A record** at the server IP first and wait
-until `ping <domain>` shows the right IP. Caddy needs that to get the certificate.
-
-## 4. Start
+## 4. Start the API
 
 ```bash
 cd deploy
 docker compose up -d --build
-docker compose ps                 # both "running", api "healthy" after ~30 s
-docker compose logs -f caddy      # look for "certificate obtained successfully"
+docker compose ps                         # api "healthy" after ~30 s
+curl http://127.0.0.1:8000/api/health     # on the server
 ```
 
-Check it:
+## 5a. HTTPS with your existing nginx
+
+```bash
+sudo cp nginx-conceptdebt.conf /etc/nginx/sites-available/conceptdebt
+sudo nano /etc/nginx/sites-available/conceptdebt    # server_name / port if different
+sudo ln -s /etc/nginx/sites-available/conceptdebt /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d api.94.249.197.142.sslip.io  # apt install certbot python3-certbot-nginx
+```
+
+nginx picks the site by `server_name`, so your other app is untouched.
+
+**Existing Caddy instead of nginx** (installed on the host): add to its Caddyfile and reload:
+
+```
+api.94.249.197.142.sslip.io {
+	reverse_proxy 127.0.0.1:8000
+}
+```
+
+If that web server runs **inside Docker**, `127.0.0.1` means its own container.
+Use `host.docker.internal:8000` (add `extra_hosts: ["host.docker.internal:host-gateway"]`
+to that container) or put both on the same Docker network.
+
+## 5b. HTTPS with the bundled Caddy (only if 80/443 are free)
+
+In `deploy/.env`:
+
+```
+COMPOSE_PROFILES=caddy
+DOMAIN=api.94.249.197.142.sslip.io
+```
+
+then `docker compose up -d` and watch `docker compose logs -f caddy` for
+"certificate obtained successfully".
+
+## 6. Check
 
 ```bash
 curl https://api.94.249.197.142.sslip.io/api/health
@@ -144,12 +174,14 @@ then `docker compose up -d`.
 
 ## Troubleshooting
 
-- **Port 80/443 already in use** (another nginx/Caddy on the server): remove the
-  `caddy` service, publish the API on localhost only by adding
-  `ports: ["127.0.0.1:8000:8000"]` under `api`, and proxy your existing web
-  server to `http://127.0.0.1:8000`.
+- **`Bind for 0.0.0.0:80 failed: port is already allocated`**: something already
+  uses port 80. Remove `COMPOSE_PROFILES=caddy` from `deploy/.env`, run
+  `docker compose up -d --remove-orphans`, and use step 5a.
+- **`127.0.0.1:8000` already allocated**: set another `API_PORT` in `deploy/.env`
+  and use that port in the nginx config.
 - **No certificate / "connection refused"**: DNS isn't pointing at the server yet,
-  or ports 80/443 are blocked (check the provider firewall too). See `docker compose logs caddy`.
+  or ports 80/443 are blocked (check the provider firewall too). Check
+  `sudo certbot certificates` / `docker compose logs caddy`.
 - **Let's Encrypt rate limit** on sslip.io (shared domain): try again later,
   or use a real domain or a free one from DuckDNS.
 - **`ai_enabled: false`** at `/api/health`: `AI_API_KEY` missing in `backend/.env`;
