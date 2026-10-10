@@ -17,9 +17,10 @@ interface ReverifyViewProps {
   session: SessionOut;
   onNewSession: () => void;
   onInspectDebugger: () => void;
+  onSessionUpdate?: (session: SessionOut) => void;
 }
 
-export function ReverifyView({ session, onNewSession, onInspectDebugger }: ReverifyViewProps) {
+export function ReverifyView({ session, onNewSession, onInspectDebugger, onSessionUpdate }: ReverifyViewProps) {
   const [reverifyData, setReverifyData] = useState<ReverifyOut | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +33,12 @@ export function ReverifyView({ session, onNewSession, onInspectDebugger }: Rever
         if (mounted) {
           setReverifyData(data);
           setLoading(false);
+          if (onSessionUpdate && session.phase !== "done") {
+            onSessionUpdate({
+              ...session,
+              phase: "done",
+            });
+          }
         }
       })
       .catch((err) => {
@@ -183,7 +190,7 @@ export function ReverifyView({ session, onNewSession, onInspectDebugger }: Rever
                   <td className="py-3 font-mono font-bold text-right text-emerald-400">
                     <span className="inline-flex items-center gap-1 bg-emerald-950/60 px-2.5 py-0.5 rounded border border-emerald-800/40">
                       <ArrowDownRight className="w-3.5 h-3.5" />
-                      <span>{item.change.toFixed(1)}%</span>
+                      <span>{Math.abs(item.change).toFixed(1)}%</span>
                     </span>
                   </td>
                 </tr>

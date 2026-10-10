@@ -24,7 +24,7 @@ interface DiagnosticViewProps {
   onExitTest?: () => void;
 }
 
-export function DiagnosticView({ session, onComplete, onExitTest }: DiagnosticViewProps) {
+export function DiagnosticView({ session, onComplete, onSessionUpdate, onExitTest }: DiagnosticViewProps) {
   const [questions, setQuestions] = useState<QuestionOut[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, { answer: string; working: string; notLearned?: boolean }>>({});
@@ -67,6 +67,13 @@ export function DiagnosticView({ session, onComplete, onExitTest }: DiagnosticVi
 
           setAnswers(loadedAnswers);
           setAttemptResults(loadedResults);
+
+          if (onSessionUpdate) {
+            onSessionUpdate({
+              ...session,
+              answered: Object.keys(loadedAnswers).length,
+            });
+          }
 
           // Find first unanswered question index
           const firstUnanswered = questionList.findIndex((q) => !loadedAnswers[q.id]);
@@ -150,15 +157,23 @@ export function DiagnosticView({ session, onComplete, onExitTest }: DiagnosticVi
         return;
       }
 
-      setAnswers((prev) => ({
-        ...prev,
+      const updatedAnswers = {
+        ...answers,
         [activeQuestion.id]: { answer: currentAnswer.trim(), working: currentWorking.trim(), notLearned: false },
-      }));
+      };
+      setAnswers(updatedAnswers);
 
       setAttemptResults((prev) => ({
         ...prev,
         [activeQuestion.id]: res,
       }));
+
+      if (onSessionUpdate) {
+        onSessionUpdate({
+          ...session,
+          answered: Object.keys(updatedAnswers).length,
+        });
+      }
 
       if (currentIndex < questions.length - 1) {
         setCurrentIndex((prev) => prev + 1);
@@ -183,15 +198,23 @@ export function DiagnosticView({ session, onComplete, onExitTest }: DiagnosticVi
         not_learned: true,
       });
 
-      setAnswers((prev) => ({
-        ...prev,
+      const updatedAnswers = {
+        ...answers,
         [activeQuestion.id]: { answer: "", working: "", notLearned: true },
-      }));
+      };
+      setAnswers(updatedAnswers);
 
       setAttemptResults((prev) => ({
         ...prev,
         [activeQuestion.id]: res,
       }));
+
+      if (onSessionUpdate) {
+        onSessionUpdate({
+          ...session,
+          answered: Object.keys(updatedAnswers).length,
+        });
+      }
 
       if (currentIndex < questions.length - 1) {
         setCurrentIndex((prev) => prev + 1);
@@ -273,7 +296,7 @@ export function DiagnosticView({ session, onComplete, onExitTest }: DiagnosticVi
             )}
 
             <span className="text-xs text-[#9E9EA7] font-mono hidden sm:inline">
-              [Kind: {activeQuestion.kind}]
+              [{activeQuestion.kind === "factored" ? "Factored Form" : activeQuestion.kind === "expression" ? "Algebraic Expression" : "Numerical Value"}]
             </span>
           </div>
 
@@ -389,7 +412,26 @@ export function DiagnosticView({ session, onComplete, onExitTest }: DiagnosticVi
                 </button>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                {answeredCount < 5 && isLastQuestion && (
+                  <span className="text-[11px] font-mono text-amber-400 border border-amber-900/60 bg-amber-950/40 px-3 py-1.5 rounded-xl">
+                    Answer {5 - answeredCount} more {5 - answeredCount === 1 ? "question" : "questions"} to unlock diagnosis
+                  </span>
+                )}
+
+                {answeredCount < 5 && isLastQuestion && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const firstUnanswered = questions.findIndex((q) => !answers[q.id]);
+                      if (firstUnanswered !== -1) setCurrentIndex(firstUnanswered);
+                    }}
+                    className="px-3.5 py-2.5 rounded-xl bg-[#35353B] hover:bg-[#4E4E58] text-xs font-semibold text-[#F3F3F4] transition-colors"
+                  >
+                    Jump to Unanswered →
+                  </button>
+                )}
+
                 {currentIndex < questions.length - 1 && (
                   <button
                     type="button"

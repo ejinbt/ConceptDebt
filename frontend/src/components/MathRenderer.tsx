@@ -46,14 +46,19 @@ interface Token {
 }
 
 function tokenizePrompt(prompt: string): Token[] {
-  // Regex to recognize math segments:
-  // - Fractions: 1/2, 3/4
-  // - Polynomials / algebraic expressions: x^2 + 5x, 2(x + 3), p(x) = x^2 - 3x + 5, p(2)
-  // - Arithmetic equations / inequalities: x > 0, 2 + 3 × 4, √(9 + 16), x + y = 10
-  // Non-math segments: "Work out", "Factorise", "completely", "If", "find", "What is x?", etc.
+  // A single math term:
+  // - parenthesized block with optional sign, coeff, and/or power: [-−]?\d*\([^)]+\)(?:\^[0-9]+)?
+  // - fraction: \b\d+\/\d+\b
+  // - variable with power/coeff: \b\d*[a-zA-Z](?:\^[0-9]+)?
+  // - number with power: \b\d+(?:\^[0-9]+)?
+  const term = "(?:[-−]?\\d*\\([^)]+\\)(?:\\^[0-9]+)?|[-−]?\\([^)]+\\)(?:\\^[0-9]+)?|\\b\\d+\\/\\d+\\b|[-−]?\\b\\d*[a-zA-Z](?:\\^[0-9]+)?|[-−]?\\b\\d+(?:\\^[0-9]+)?)";
+  const op = "(?:\\s*[\\+\\−\\-\\*\\/·×÷=><]\\s*)";
 
-  // We match math patterns specifically:
-  const mathRegex = /(\b[a-zA-Z]\([a-zA-Z0-9\s\+\-\*\/]+\)\s*=\s*[a-zA-Z0-9\^_\+\-\*\/·×÷\s]+|\b[a-zA-Z]\([a-zA-Z0-9\+\-]+\)|(?:[a-zA-Z0-9]+|\([a-zA-Z0-9\s\+\-]+\))\^[a-zA-Z0-9]+|[a-zA-Z0-9\s\+\-]*=[a-zA-Z0-9\s\+\-\*\/]+|\b\d+\s*[\+\−\-\*\/·×÷]\s*\d+(?:\s*[\+\−\-\*\/·×÷]\s*\d+)*|\b\d+\/\d+\b|\b\d+[a-zA-Z]\b|[a-zA-Z]\s*[><=]\s*\d+|√\([^)]+\)|√\d+)/g;
+  // Expression is:
+  // 1. One or more terms connected by operators: term (op term)+
+  // 2. Or juxtaposition of brackets: (term)+ (e.g. (x+2)(x+5))
+  // 3. Or a single compound term like 3(x + 2), -(x - 7), (x + 3)^2, x^2
+  const mathRegex = new RegExp(`(?:${term}(?:${op}${term})+|(?:\\([^)]+\\)){2,}|[-−]?\\d*\\([^)]+\\)(?:\\^[0-9]+)?|[-−]?\\([^)]+\\)(?:\\^[0-9]+)?|\\b[a-zA-Z]\\^[0-9]+|\\b\\d+\\/\\d+\\b)`, "g");
 
   const tokens: Token[] = [];
   let lastIndex = 0;
@@ -86,19 +91,6 @@ function tokenizePrompt(prompt: string): Token[] {
       value: prompt.substring(lastIndex),
       isMath: false,
     });
-  }
-
-  // Fallback: If no math segment was caught but the whole string contains arithmetic symbols
-  if (tokens.length === 1 && !tokens[0].isMath && /[0-9]+[\+\-\*\/][0-9]+|\^/.test(prompt)) {
-    // If it's a simple command like "Expand 3(x + 2)" or "Factorise 6x + 9 completely"
-    const m = prompt.match(/^([a-zA-Z\s]+?)\s+([a-zA-Z0-9\^_\+\-\*\/·×÷()=\s]+?)(?:\s+([a-zA-Z\s.,?!]+))?$/);
-    if (m) {
-      const res: Token[] = [];
-      if (m[1]) res.push({ value: m[1] + " ", isMath: false });
-      if (m[2]) res.push({ value: m[2], isMath: true });
-      if (m[3]) res.push({ value: " " + m[3], isMath: false });
-      return res;
-    }
   }
 
   return tokens.length > 0 ? tokens : [{ value: prompt, isMath: false }];

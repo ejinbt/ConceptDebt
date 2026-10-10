@@ -127,13 +127,19 @@ export function App() {
 
   const handleStartRepair = () => {
     if (!session) return;
-    // Switch to repair view directly without making a duplicate API call; RepairView handles fetching drills
+    setSession({
+      ...session,
+      phase: "repair",
+    });
     setCurrentView("repair");
   };
 
   const handleFinishRepair = () => {
     if (!session) return;
-    // Switch to reverify view directly without making a duplicate API call; ReverifyView handles reverify
+    setSession({
+      ...session,
+      phase: "done",
+    });
     setCurrentView("done");
   };
 
@@ -432,6 +438,7 @@ export function App() {
             session={session}
             onFinishRepair={handleFinishRepair}
             onBackToDebugger={() => setCurrentView("debugged")}
+            onSessionUpdate={(s) => setSession(s)}
           />
         )}
 
@@ -441,6 +448,7 @@ export function App() {
             session={session}
             onNewSession={() => setConfirmResetOpen(true)}
             onInspectDebugger={handleInspectDebugger}
+            onSessionUpdate={(s) => setSession(s)}
           />
         )}
       </main>

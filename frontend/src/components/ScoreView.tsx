@@ -66,7 +66,7 @@ export function ScoreView({ session, onBackToTest, onStartDebug, isDebugging }: 
       {/* Eyebrow Label */}
       <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#2A2A2F] border border-[#35353B] text-xs font-mono text-[#9E9EA7] mb-8">
         <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-        <span>SURFACE ASSESSMENT SYMPTOM</span>
+        <span>{session.grade ? `CLASS ${session.grade} · ` : ""}SURFACE ASSESSMENT SYMPTOM</span>
       </div>
 
       {/* Hero Score Display */}

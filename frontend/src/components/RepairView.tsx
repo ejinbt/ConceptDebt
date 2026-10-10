@@ -17,9 +17,10 @@ interface RepairViewProps {
   session: SessionOut;
   onFinishRepair: () => void;
   onBackToDebugger: () => void;
+  onSessionUpdate?: (session: SessionOut) => void;
 }
 
-export function RepairView({ session, onFinishRepair, onBackToDebugger }: RepairViewProps) {
+export function RepairView({ session, onFinishRepair, onBackToDebugger, onSessionUpdate }: RepairViewProps) {
   const [repairData, setRepairData] = useState<RepairOut | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,12 +33,41 @@ export function RepairView({ session, onFinishRepair, onBackToDebugger }: Repair
 
   useEffect(() => {
     let mounted = true;
-    api.startRepair(session.session_id, 3)
-      .then((data) => {
-        if (mounted) {
-          setRepairData(data);
-          setLoading(false);
+    Promise.all([
+      api.startRepair(session.session_id, 3),
+      api.getAttempts(session.session_id).catch(() => []),
+    ])
+      .then(([data, pastAttempts]) => {
+        if (!mounted) return;
+        setRepairData(data);
+
+        if (onSessionUpdate && session.phase !== "repair") {
+          onSessionUpdate({
+            ...session,
+            phase: "repair",
+          });
         }
+
+        // Restore any repair attempts already submitted in this session
+        const repairAttempts = (pastAttempts || []).filter((a) => a.mode === "repair");
+        if (repairAttempts.length > 0) {
+          const loadedResults: Record<string, AttemptOut> = {};
+          repairAttempts.forEach((att) => {
+            loadedResults[att.question_id] = att;
+          });
+          setResults(loadedResults);
+
+          // Find first unanswered repair drill
+          const firstUnanswered = data.questions.findIndex((q) => !loadedResults[q.id]);
+          if (firstUnanswered !== -1) {
+            setCurrentIndex(firstUnanswered);
+          } else {
+            setCurrentIndex(data.questions.length - 1);
+            setFeedback(loadedResults[data.questions[data.questions.length - 1].id] || null);
+          }
+        }
+
+        setLoading(false);
       })
       .catch((err) => {
         if (mounted) {
@@ -53,9 +83,15 @@ export function RepairView({ session, onFinishRepair, onBackToDebugger }: Repair
   const activeQuestion = repairData?.questions[currentIndex];
 
   useEffect(() => {
-    setCurrentAnswer("");
-    setFeedback(null);
-  }, [currentIndex]);
+    if (activeQuestion && results[activeQuestion.id]) {
+      const existing = results[activeQuestion.id];
+      setCurrentAnswer(existing.answer || "");
+      setFeedback(existing);
+    } else {
+      setCurrentAnswer("");
+      setFeedback(null);
+    }
+  }, [currentIndex, activeQuestion]);
 
   const [invalidNotice, setInvalidNotice] = useState<string | null>(null);
 
@@ -216,13 +252,24 @@ export function RepairView({ session, onFinishRepair, onBackToDebugger }: Repair
 
           {/* Controls */}
           <div className="pt-6 border-t border-[#35353B] flex items-center justify-between">
-            <button
-              type="button"
-              onClick={onBackToDebugger}
-              className="px-4 py-2.5 rounded-xl bg-[#0E0E10] hover:bg-[#35353B] text-xs font-semibold text-[#9E9EA7] hover:text-[#F3F3F4] transition-colors"
-            >
-              Back to Debugger
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onBackToDebugger}
+                className="px-4 py-2.5 rounded-xl bg-[#0E0E10] hover:bg-[#35353B] text-xs font-semibold text-[#9E9EA7] hover:text-[#F3F3F4] transition-colors"
+              >
+                Back to Debugger
+              </button>
+              {currentIndex > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setCurrentIndex((prev) => prev - 1)}
+                  className="px-3.5 py-2.5 rounded-xl bg-[#0E0E10] hover:bg-[#35353B] text-xs font-semibold text-[#9E9EA7] hover:text-[#F3F3F4] transition-colors"
+                >
+                  Previous Drill
+                </button>
+              )}
+            </div>
 
             {!feedback ? (
               <button

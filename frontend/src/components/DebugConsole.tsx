@@ -101,32 +101,52 @@ export function DebugConsole({
   const root = analysis.root;
   const trace = analysis.trace;
 
+  // Inspected concept is selected row or fallback to root cause
+  const inspected = selectedConceptId
+    ? analysis.concepts.find((c) => c.concept_id === selectedConceptId) || root
+    : root;
+  const isInspectingRoot = !inspected || inspected.concept_id === root?.concept_id;
+
   return (
     <div className="w-full space-y-6">
       {/* Top Banner: Diagnosis & Stack Trace */}
       <div className="grid lg:grid-cols-12 gap-6">
-        {/* Left Column: Root Cause Card (7 cols) */}
+        {/* Left Column: Root Cause / Inspected Concept Card (7 cols) */}
         <div className="lg:col-span-7 rounded-3xl bg-[#2A2A2F] border border-[#6A040F] p-6 sm:p-8 shadow-2xl relative overflow-hidden flex flex-col justify-between">
           <div className="absolute top-0 right-0 w-48 h-48 bg-[#D00000]/10 rounded-full blur-3xl pointer-events-none" />
 
           <div>
             <div className="flex items-center justify-between mb-4">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#6A040F] text-[#F3F3F4] text-xs font-mono font-semibold tracking-wider uppercase border border-[#D00000]/40">
-                <AlertOctagon className="w-3.5 h-3.5 text-[#D00000]" />
-                <span>ROOT CAUSE IDENTIFIED</span>
-              </span>
+              {isInspectingRoot ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#6A040F] text-[#F3F3F4] text-xs font-mono font-semibold tracking-wider uppercase border border-[#D00000]/40">
+                  <AlertOctagon className="w-3.5 h-3.5 text-[#D00000]" />
+                  <span>ROOT CAUSE IDENTIFIED</span>
+                </span>
+              ) : (
+                <div className="flex items-center gap-2.5">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1A1A1E] text-[#F3F3F4] text-xs font-mono font-semibold tracking-wider uppercase border border-[#35353B]">
+                    <span>INSPECTING TOPIC{inspected && "level" in inspected ? ` · LEVEL ${inspected.level}` : ""}</span>
+                  </span>
+                  <button
+                    onClick={() => setSelectedConceptId(root ? root.concept_id : null)}
+                    className="text-[11px] font-mono text-[#D00000] hover:underline"
+                  >
+                    ← Back to Root Cause
+                  </button>
+                </div>
+              )}
 
-              {root && (
+              {inspected && (
                 <span className="text-xs font-mono text-[#9E9EA7]">
-                  CONFIDENCE: {Math.round(root.confidence * 100)}%
+                  CONFIDENCE: {Math.round(inspected.confidence * 100)}%
                 </span>
               )}
             </div>
 
-            {root ? (
+            {inspected ? (
               <>
                 <h2 className="text-3xl sm:text-4xl font-display font-bold text-[#F3F3F4] mb-3">
-                  {root.name}
+                  {inspected.name}
                 </h2>
 
                 {/* Metrics Badges */}
@@ -134,32 +154,32 @@ export function DebugConsole({
                   <div className="p-3 rounded-xl bg-[#0E0E10] border border-[#35353B]">
                     <div className="text-[10px] font-mono text-[#9E9EA7] uppercase">Concept Debt</div>
                     <div className="text-2xl font-display font-bold text-[#D00000]">
-                      {root.debt.toFixed(1)}%
+                      {inspected.debt.toFixed(1)}%
                     </div>
                   </div>
 
                   <div className="p-3 rounded-xl bg-[#0E0E10] border border-[#35353B]">
                     <div className="text-[10px] font-mono text-[#9E9EA7] uppercase">Direct Mistakes</div>
                     <div className="text-2xl font-display font-bold text-[#F3F3F4]">
-                      {root.mistakes}
+                      {inspected.mistakes}
                     </div>
                   </div>
 
                   <div className="p-3 rounded-xl bg-[#0E0E10] border border-[#35353B]">
                     <div className="text-[10px] font-mono text-[#9E9EA7] uppercase">Affects Topics</div>
                     <div className="text-2xl font-display font-bold text-amber-400">
-                      {root.affected_topics.length}
+                      {inspected.affected_topics ? inspected.affected_topics.length : 0}
                     </div>
                   </div>
                 </div>
 
                 {/* Misconceptions detected */}
-                {root.misconceptions.length > 0 && (
+                {inspected.misconceptions && inspected.misconceptions.length > 0 && (
                   <div className="mb-6 space-y-2">
                     <div className="text-xs font-mono text-[#9E9EA7] uppercase tracking-wider">
                       Observed Misconception Pattern:
                     </div>
-                    {root.misconceptions.map((m) => (
+                    {inspected.misconceptions.map((m) => (
                       <div
                         key={m.id}
                         className="p-3 rounded-xl bg-[#0E0E10] border border-[#6A040F]/50 flex items-center justify-between text-xs text-[#F3F3F4]"
@@ -176,21 +196,25 @@ export function DebugConsole({
                 {/* Plain-Language Explanation */}
                 <div className="p-4 rounded-xl bg-[#0E0E10] border border-[#35353B] mb-6 space-y-3">
                   <p className="text-sm text-[#F3F3F4] leading-relaxed font-sans">
-                    {analysis.explanation.summary}
+                    {isInspectingRoot
+                      ? analysis.explanation.summary
+                      : `${inspected.name} carries ${inspected.debt.toFixed(1)}% accumulated debt with ${inspected.mistakes} direct error(s) registered.`}
                   </p>
                   
-                  {root.ncert && (
+                  {inspected.ncert && (
                     <div className="p-3 rounded-lg bg-[#6A040F]/30 border border-[#D00000]/40 flex items-center gap-2.5 text-xs text-[#F3F3F4]">
                       <span className="w-2 h-2 rounded-full bg-[#D00000] shrink-0" />
                       <div>
                         <span className="font-mono text-[#D00000] font-semibold uppercase mr-1.5">REVISE NCERT:</span>
-                        <span className="font-semibold text-white">{root.ncert}</span>
+                        <span className="font-semibold text-white">{inspected.ncert}</span>
                       </div>
                     </div>
                   )}
 
                   <p className="text-xs text-[#9E9EA7] font-sans">
-                    {analysis.explanation.advice}
+                    {isInspectingRoot
+                      ? analysis.explanation.advice
+                      : `Targeted repair of the root cause (${root?.name || "prerequisite"}) will automatically propagate and reduce debt in ${inspected.name}.`}
                   </p>
                 </div>
               </>
@@ -223,7 +247,7 @@ export function DebugConsole({
               </button>
             </div>
 
-            {root && (
+            {isInspectingRoot && root ? (
               <button
                 onClick={onStartRepair}
                 disabled={isRepairing}
@@ -242,7 +266,16 @@ export function DebugConsole({
                   </>
                 )}
               </button>
-            )}
+            ) : root ? (
+              <button
+                onClick={() => setSelectedConceptId(root.concept_id)}
+                className="px-5 py-2.5 rounded-xl bg-[#35353B] hover:bg-[#4E4E58] text-xs font-semibold text-[#F3F3F4] tracking-wider uppercase transition-all flex items-center gap-2"
+              >
+                <AlertOctagon className="w-3.5 h-3.5 text-[#D00000]" />
+                <span>Focus Root Cause ({root.name})</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -324,7 +357,11 @@ export function DebugConsole({
 
           <div className="mt-6 pt-4 border-t border-[#35353B] text-[11px] text-[#9E9EA7] flex items-center gap-2 font-mono">
             <span className="w-2 h-2 rounded-full bg-[#D00000]" />
-            <span>Fixing step {trace.length} automatically heals steps 1 through {trace.length - 1}.</span>
+            <span>
+              {trace && trace.length > 1
+                ? `Fixing step ${trace.length} automatically heals steps 1 through ${trace.length - 1}.`
+                : "Fixing this root cause directly eliminates foundational concept debt."}
+            </span>
           </div>
         </div>
       </div>
