@@ -69,7 +69,7 @@ Suggested UI hint under the input: *"Use ^ for powers, e.g. x^2"*.
 
 ### `GET /api/health`
 ```json
-{ "status": "ok", "ai_enabled": true, "ai_model": "Qwen/Qwen2.5-72B-Instruct" }
+{ "status": "ok", "ai_enabled": true, "ai_model": "Qwen/Qwen2.5-32B-Instruct" }
 ```
 `ai_enabled: false` means explanations come from templates and unknown wrong answers
 aren't classified. Everything else works the same.

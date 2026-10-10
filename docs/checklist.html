@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backend Test Checklist</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1b1f24; --muted: #646d78; --line: #dde1e6;
+    --pass: #1a7f37; --pass-bg: #e6f4ea; --fail: #c62828; --fail-bg: #fdecea; --accent: #2f5bd3;
+    --code-bg: #eef0f3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216; --card: #171b21; --text: #e6e9ed; --muted: #97a0ab; --line: #2a3038;
+      --pass: #4cc26b; --pass-bg: #15291c; --fail: #ff6b6b; --fail-bg: #331a1a; --accent: #7aa2ff;
+      --code-bg: #232931;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --card: #171b21; --text: #e6e9ed; --muted: #97a0ab; --line: #2a3038;
+    --pass: #4cc26b; --pass-bg: #15291c; --fail: #ff6b6b; --fail-bg: #331a1a; --accent: #7aa2ff;
+    --code-bg: #232931;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
+  header { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 12px 0; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+  h1 { font-size: 20px; margin: 0 0 8px; }
+  .bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; display: flex; }
+  .bar span { display: block; height: 100%; }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-top: 8px; font-size: 13px; color: var(--muted); }
+  .stats b { color: var(--text); }
+  .tools { margin-left: auto; display: flex; flex-wrap: wrap; gap: 6px; }
+  button { font: inherit; font-size: 13px; padding: 5px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--text); cursor: pointer; }
+  button:hover { border-color: var(--muted); }
+  button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 16px; overflow: hidden; }
+  section h2 { font-size: 15px; margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; }
+  section h2 small { color: var(--muted); font-weight: normal; }
+  .item { padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  .item:last-child { border-bottom: 0; }
+  .item.pass { background: var(--pass-bg); }
+  .item.fail { background: var(--fail-bg); }
+  .row { display: flex; gap: 10px; align-items: flex-start; }
+  .text { flex: 1; min-width: 0; padding-top: 3px; overflow-wrap: anywhere; }
+  .item.pass .text { color: var(--muted); }
+  .status { display: flex; gap: 4px; flex-shrink: 0; }
+  .status button { width: 34px; padding: 4px 0; font-weight: 600; }
+  .status .p.on { background: var(--pass); border-color: var(--pass); }
+  .status .f.on { background: var(--fail); border-color: var(--fail); }
+  .notebtn { font-size: 12px; padding: 2px 8px; margin-top: 6px; color: var(--muted); }
+  .notebtn.has { color: var(--accent); border-color: var(--accent); }
+  textarea { display: none; width: 100%; margin-top: 8px; min-height: 64px; font: inherit; font-size: 14px; padding: 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); resize: vertical; }
+  textarea.open { display: block; }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  .hide-pass .item.pass { display: none; }
+  .intro { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; font-size: 14px; }
+  .intro pre { background: var(--code-bg); padding: 8px 10px; border-radius: 6px; overflow-x: auto; margin: 8px 0 0; font-size: 13px; }
+  #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 6px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  #toast.show { opacity: 1; }
+  @media (max-width: 560px) { .tools { margin-left: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Concept Debt · backend test checklist</h1>
+    <div class="bar" id="bar"></div>
+    <div class="stats">
+      <span><b id="n-pass">0</b> passed</span>
+      <span><b id="n-fail">0</b> failed</span>
+      <span><b id="n-left">0</b> left</span>
+      <div class="tools">
+        <button id="hide-btn" onclick="toggleHide()">Hide passed</button>
+        <button onclick="copyReport()">Copy report</button>
+        <button onclick="downloadReport()">Download .md</button>
+        <button onclick="resetAll()">Reset</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="intro">
+    <b>✓</b> = passed, <b>✗</b> = failed (click again to clear). Add a note to any item.
+    Everything is saved in this browser. When you're done, <b>Copy report</b> and paste it to Claude.
+    <pre>cd backend
+source .venv/Scripts/activate      # PowerShell: .\.venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload</pre>
+  </div>
+
+  <div id="list"></div>
+</div>
+<div id="toast"></div>
+
+<script>
+const SECTIONS = [
+  ["Setup", [
+    "<code>python -m pytest</code> → all tests pass",
+    "<code>http://localhost:8000/api/health</code> → <code>\"status\": \"ok\"</code>",
+    "<code>http://localhost:8000/docs</code> opens (Swagger UI)",
+    "<code>http://localhost:8000/</code> opens the tester page, styled (Bootstrap loaded)",
+  ]],
+  ["AI (Featherless)", [
+    "Key is in <code>backend/.env</code> as <code>AI_API_KEY=...</code> and <code>AI_MODEL=Qwen/Qwen2.5-32B-Instruct</code>, server restarted",
+    "<code>/api/health</code> → <code>\"ai_enabled\": true</code> and the model name",
+    "Start a test, answer Q5 <code>Expand 3(x + 2)</code> with <code>3x + 5</code> and working <code>I multiplied 3 by x and added 5</code> → request log shows <code>\"source\": \"ai\"</code> with a misconception and rationale (or <code>\"unclassified\"</code> if the model wasn't sure)",
+    "Wrong answers it doesn't recognise come back in under ~5 s (note the time)",
+    "Click <b>Debug learning</b> → explanation ends with <code>[ai]</code>, reads naturally, mentions the root concept",
+    "Terminal has few or no <code>AI reply had no JSON</code> / <code>failed validation</code> warnings",
+    "Set <code>AI_DISABLED=1</code>, restart → everything still works, explanation shows <code>[template]</code>",
+  ]],
+  ["Demo flow (what judges see)", [
+    "<b>Load demo student</b> → score <b>46%</b> (6 of 13)",
+    "<b>Debug learning</b> → root <b>Distributive Property ~85%</b>, 6 mistakes, trace ends on it",
+    "Graph: root is red, trace nodes amber",
+    "<b>Repair the root</b> → 3 questions on Distributive Property",
+    "Answer <code>4x + 20</code>, <code>-3x - 6</code>, <code>10x - 5</code> → each shows ✓",
+    "Result → <b>85.2% → 24.5%</b>, 3/3 correct",
+  ]],
+  ["Real diagnostic", [
+    "<b>Start new diagnostic</b>, answer all 13 correctly → 100%, Debug says no root found",
+    "New session, answer Q1 with <code>2/5</code> → after Debug, Fraction Operations shows debt",
+    "Equivalent answers accepted: <code>6 + 3x</code>, <code>3*x+6</code>, <code>x = 7</code>, <code>x²</code>, <code>0.8333</code> for <code>5/6</code>",
+    "Q11 (factorise): <code>6x + 9</code> is marked wrong, <code>3(2x + 3)</code> is right",
+    "Junk input (<code>hello</code>, <code>)))</code>) is marked wrong, no server error",
+  ]],
+  ["Navigation (tester page)", [
+    "<b>← Previous</b> and <b>Skip →</b> move between questions",
+    "Number pills jump to any question; answered ones are filled in",
+    "Going back shows your earlier answer; <b>Update answer</b> replaces it",
+    "Browser back/forward buttons move between screens",
+    "Refresh mid-test → same session, same question",
+    "<b>Finish test</b> early asks for confirmation, then shows the score",
+    "Top bar steps unlock as you go (Score → Debugger → Repair → Result)",
+    "From Result: back to repair, change an answer, open Result again → numbers update",
+    "<b>End session</b> → back to Start with a clean slate",
+  ]],
+  ["API edge cases (from /docs)", [
+    "<code>GET /api/sessions/nope</code> → 404",
+    "<code>POST /api/sessions/{id}/repair</code> before debug → 409",
+    "<code>POST /api/sessions/{id}/reverify</code> before debug → 409",
+    "<code>POST /api/attempts</code> with unknown <code>question_id</code> → 404, empty <code>answer</code> → 422",
+    "<code>GET /api/graph</code> → 25 nodes, edges go prerequisite → dependent",
+    "<code>GET /api/teacher/overview</code> after a few debugged sessions → concept totals",
+  ]],
+  ["Database", [
+    "<code>python -m app.seed --reset</code> → <code>seeded</code>, app starts fresh",
+    "Supabase: set <code>DATABASE_URL</code> to the Postgres URL, restart, run the demo flow again",
+    "Frontend teammate can call the API from their dev server (no CORS error in browser console)",
+  ]],
+];
+
+const KEY = "conceptdebt.checklist.v1";
+let data = {};
+try { data = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { data = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch {} };
+const idOf = (s, i) => `s${s}-${i}`;
+const plain = (html) => { const d = document.createElement("div"); d.innerHTML = html; return d.textContent; };
+const items = SECTIONS.flatMap(([, list], s) => list.map((_, i) => idOf(s, i)));
+
+function render() {
+  document.getElementById("list").innerHTML = SECTIONS.map(([title, list], s) => `
+    <section>
+      <h2>${s + 1}. ${title} <small id="count-${s}"></small></h2>
+      ${list.map((text, i) => {
+        const id = idOf(s, i), d = data[id] || {};
+        return `<div class="item ${d.status || ""}" id="${id}">
+          <div class="row">
+            <div class="text">${text}</div>
+            <div class="status">
+              <button class="p ${d.status === "pass" ? "on" : ""}" title="Passed" onclick="setStatus('${id}','pass')">✓</button>
+              <button class="f ${d.status === "fail" ? "on" : ""}" title="Failed" onclick="setStatus('${id}','fail')">✗</button>
+            </div>
+          </div>
+          <button class="notebtn ${d.note ? "has" : ""}" onclick="toggleNote('${id}')">${d.note ? "✎ note" : "+ note"}</button>
+          <textarea class="${d.note ? "open" : ""}" placeholder="What happened? Errors, timings, screenshots to share…" oninput="setNote('${id}', this.value)">${(d.note || "").replace(/</g, "&lt;")}</textarea>
+        </div>`;
+      }).join("")}
+    </section>`).join("");
+  updateStats();
+}
+
+function setStatus(id, status) {
+  const d = (data[id] = data[id] || {});
+  d.status = d.status === status ? null : status;
+  save();
+  const el = document.getElementById(id);
+  el.className = `item ${d.status || ""}`;
+  el.querySelector(".p").classList.toggle("on", d.status === "pass");
+  el.querySelector(".f").classList.toggle("on", d.status === "fail");
+  if (d.status === "fail" && !d.note) toggleNote(id, true);
+  updateStats();
+}
+
+function toggleNote(id, forceOpen) {
+  const ta = document.querySelector(`#${id} textarea`);
+  const open = forceOpen || !ta.classList.contains("open");
+  ta.classList.toggle("open", open);
+  if (open) ta.focus();
+}
+
+function setNote(id, value) {
+  const d = (data[id] = data[id] || {});
+  d.note = value;
+  save();
+  const btn = document.querySelector(`#${id} .notebtn`);
+  btn.classList.toggle("has", !!value);
+  btn.textContent = value ? "✎ note" : "+ note";
+}
+
+function updateStats() {
+  const count = (st) => items.filter((id) => data[id]?.status === st).length;
+  const pass = count("pass"), fail = count("fail"), left = items.length - pass - fail;
+  document.getElementById("n-pass").textContent = pass;
+  document.getElementById("n-fail").textContent = fail;
+  document.getElementById("n-left").textContent = left;
+  const pct = (n) => (100 * n) / items.length + "%";
+  document.getElementById("bar").innerHTML =
+    `<span style="width:${pct(pass)};background:var(--pass)"></span><span style="width:${pct(fail)};background:var(--fail)"></span>`;
+  SECTIONS.forEach(([, list], s) => {
+    const ids = list.map((_, i) => idOf(s, i));
+    const done = ids.filter((id) => data[id]?.status).length;
+    document.getElementById(`count-${s}`).textContent = `${done}/${ids.length}`;
+  });
+}
+
+function toggleHide() {
+  const on = document.getElementById("list").classList.toggle("hide-pass");
+  document.getElementById("hide-btn").classList.toggle("on", on);
+}
+
+function report() {
+  const lines = ["# Concept Debt backend test results", ""];
+  const counts = { pass: 0, fail: 0 };
+  items.forEach((id) => { const st = data[id]?.status; if (st) counts[st]++; });
+  lines.push(`${counts.pass} passed · ${counts.fail} failed · ${items.length - counts.pass - counts.fail} not tested`, "");
+  SECTIONS.forEach(([title, list], s) => {
+    lines.push(`## ${s + 1}. ${title}`);
+    list.forEach((text, i) => {
+      const d = data[idOf(s, i)] || {};
+      const mark = d.status === "pass" ? "[x]" : d.status === "fail" ? "[FAIL]" : "[ ]";
+      lines.push(`- ${mark} ${plain(text)}`);
+      if (d.note) lines.push(...d.note.trim().split("\n").map((l) => `  > ${l}`));
+    });
+    lines.push("");
+  });
+  return lines.join("\n");
+}
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1600);
+}
+
+async function copyReport() {
+  try { await navigator.clipboard.writeText(report()); toast("Report copied"); }
+  catch { downloadReport(); }
+}
+
+function downloadReport() {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([report()], { type: "text/markdown" }));
+  a.download = "conceptdebt-test-results.md";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function resetAll() {
+  if (!confirm("Clear all ticks and notes?")) return;
+  data = {}; save(); render();
+}
+
+render();
+</script>
+</body>
+</html>

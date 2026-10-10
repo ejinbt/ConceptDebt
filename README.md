@@ -28,7 +28,7 @@ Put your Featherless key in `backend/.env` (`AI_API_KEY=`) to switch the AI on.
 - Test UI: http://localhost:8000/
 - API docs: http://localhost:8000/docs
 - Frontend integration spec: [`docs/API.md`](docs/API.md)
-- Test checklist: [`docs/TESTING.md`](docs/TESTING.md)
+- Test checklist: open [`docs/checklist.html`](docs/checklist.html) in a browser (tick, fail, add notes, export a report), or read [`docs/TESTING.md`](docs/TESTING.md)
 
 The database (SQLite by default) is created and seeded on first start.
 Reset it with `python -m app.seed --reset`. Run tests with `python -m pytest`.
@@ -42,7 +42,7 @@ Docker: `docker build -t conceptdebt backend && docker run -p 8000:8000 --env-fi
 | `DATABASE_URL` | `sqlite:///backend/conceptdebt.db` | For Supabase: `postgresql+psycopg://postgres:<password>@db.<ref>.supabase.co:5432/postgres` |
 | `AI_API_KEY` | empty | Featherless key. Empty = AI off, app still works on rules + templates |
 | `AI_BASE_URL` | `https://api.featherless.ai/v1` | Any OpenAI-compatible endpoint |
-| `AI_MODEL` | `Qwen/Qwen2.5-72B-Instruct` | Any chat model your plan includes |
+| `AI_MODEL` | `Qwen/Qwen2.5-32B-Instruct` | Any chat model your plan includes. On the $25 Premium plan a ~32B model allows 2 requests at once; 70B+ allows only 1 |
 | `AI_DISABLED` | `0` | `1` switches AI off without removing the key |
 | `CORS_ORIGINS` | `*` | Comma-separated list for production |
 
