@@ -5,7 +5,8 @@ The API listens on **`127.0.0.1:8000` only**, so it doesn't clash with other app
 HTTPS comes from a web server in front of it:
 
 - **Option A: you already run nginx (or Caddy, etc.) on 80/443.** Add one site
-  that proxies to `127.0.0.1:8000`. Your other apps keep working.
+  that proxies to the API. Your other apps keep working. Installed on the host:
+  step 5a. Running in Docker: step 5c.
 - **Option B: nothing on 80/443.** Turn on the bundled Caddy container (`COMPOSE_PROFILES=caddy`).
 
 Result: `https://<DOMAIN>/` (tester), `https://<DOMAIN>/docs`, `https://<DOMAIN>/api/...`
@@ -76,6 +77,43 @@ api.94.249.197.142.sslip.io {
 If that web server runs **inside Docker**, `127.0.0.1` means its own container.
 Use `host.docker.internal:8000` (add `extra_hosts: ["host.docker.internal:host-gateway"]`
 to that container) or put both on the same Docker network.
+
+## 5c. HTTPS with an existing Caddy (or Traefik) running in Docker
+
+`docker ps` shows a proxy container publishing `0.0.0.0:80` and `:443`.
+
+```bash
+# its network and where its Caddyfile lives on the host
+docker inspect caddy --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{"\n"}}{{end}}'
+docker inspect caddy --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}'
+```
+
+In `deploy/.env` (use the network name printed above):
+
+```
+COMPOSE_FILE=docker-compose.yml:docker-compose.proxy.yml
+PROXY_NETWORK=<network name>
+```
+
+```bash
+docker compose up -d     # api joins that network as "conceptdebt-api"
+```
+
+Add a site to that Caddyfile (the host file mounted at `/etc/caddy/Caddyfile`):
+
+```
+api.94.249.197.142.sslip.io {
+	reverse_proxy conceptdebt-api:8000
+}
+```
+
+```bash
+docker exec caddy caddy validate --config /etc/caddy/Caddyfile
+docker exec caddy caddy reload --config /etc/caddy/Caddyfile
+```
+
+`reload` applies the new config with no downtime for the other sites. Caddy then
+gets the certificate for the new domain by itself.
 
 ## 5b. HTTPS with the bundled Caddy (only if 80/443 are free)
 
