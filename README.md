@@ -33,7 +33,9 @@ Put your Featherless key in `backend/.env` (`AI_API_KEY=`) to switch the AI on.
 The database (SQLite by default) is created and seeded on first start.
 Reset it with `python -m app.seed --reset`. Run tests with `python -m pytest`.
 
-Docker (the volume keeps the SQLite database across restarts and redeploys):
+**Production:** see [`deploy/README.md`](deploy/README.md) (Docker Compose + Caddy for HTTPS on a VPS).
+
+Docker on its own (the volume keeps the SQLite database across restarts and redeploys):
 
 ```bash
 docker build -t conceptdebt backend

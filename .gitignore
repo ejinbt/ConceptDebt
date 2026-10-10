@@ -7,3 +7,4 @@ venv/
 *.sqlite
 .pytest_cache/
 .DS_Store
+deploy/.env
