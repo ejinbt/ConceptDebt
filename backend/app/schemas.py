@@ -48,6 +48,8 @@ class AttemptOut(BaseModel):
     attempt_id: int
     question_id: str
     mode: Literal["diagnostic", "repair"]
+    answer: str
+    working: Optional[str]
     correct: bool
     correct_answer: str
     misconception: Optional[MisconceptionRef]

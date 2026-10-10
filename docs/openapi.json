@@ -713,6 +713,21 @@
             ],
             "title": "Mode"
           },
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          },
+          "working": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Working"
+          },
           "correct": {
             "type": "boolean",
             "title": "Correct"
@@ -762,6 +777,8 @@
           "attempt_id",
           "question_id",
           "mode",
+          "answer",
+          "working",
           "correct",
           "correct_answer",
           "misconception",

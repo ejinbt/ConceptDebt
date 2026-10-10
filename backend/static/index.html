@@ -15,12 +15,16 @@
     .chain span + span::before { content: " → "; color: var(--bs-secondary-color); }
     #log { max-height: 320px; overflow: auto; font-size: .72rem; white-space: pre-wrap; }
     .bar { height: 1.1rem; }
+    .steps .nav-link { font-size: .8rem; padding: .3rem .6rem; }
+    .steps .nav-link.disabled { opacity: .35; }
+    .qpill { width: 2rem; padding: .15rem 0; font-size: .75rem; }
   </style>
 </head>
 <body class="bg-body">
-<nav class="navbar border-bottom px-3">
-  <span class="navbar-brand">concept_debt <small class="text-secondary">/ api tester</small></span>
-  <span class="small text-secondary" id="health">…</span>
+<nav class="navbar border-bottom px-3 gap-2 flex-wrap">
+  <a class="navbar-brand" href="#start">concept_debt <small class="text-secondary">/ api tester</small></a>
+  <ul class="nav nav-pills steps flex-wrap" id="steps"></ul>
+  <span class="small text-secondary ms-auto" id="health">…</span>
 </nav>
 
 <main class="container py-4">
@@ -31,7 +35,11 @@
       <section id="v-start" class="card"><div class="card-body">
         <h5 class="card-title">Start a diagnostic</h5>
         <p class="text-secondary small">13 short maths questions. Type answers like <code>3x + 6</code>, <code>x^2</code>, <code>5/6</code>, <code>3(2x + 3)</code>.</p>
-        <button class="btn btn-primary" onclick="start()">Start diagnostic</button>
+        <div id="continue-box" class="alert alert-secondary small d-none">
+          Session in progress: <code id="continue-id"></code> (<span id="continue-phase"></span>)
+          <button class="btn btn-sm btn-primary ms-2" onclick="continueSession()">Continue</button>
+        </div>
+        <button class="btn btn-primary" onclick="start()">Start new diagnostic</button>
         <button class="btn btn-outline-secondary" onclick="startDemo()">Load demo student</button>
         <div class="input-group input-group-sm mt-3" style="max-width: 420px">
           <input id="resume-id" class="form-control" placeholder="or paste a session_id">
@@ -39,17 +47,22 @@
         </div>
       </div></section>
 
-      <!-- question -->
+      <!-- question (diagnostic and repair) -->
       <section id="v-question" class="card d-none"><div class="card-body">
         <div class="d-flex justify-content-between small text-secondary mb-2">
           <span id="q-label"></span><span id="q-concept"></span>
         </div>
-        <div class="progress mb-3" style="height:4px"><div id="q-progress" class="progress-bar"></div></div>
+        <div class="d-flex flex-wrap gap-1 mb-3" id="q-pills"></div>
         <h4 id="q-prompt" class="mb-3"></h4>
         <form onsubmit="submitAnswer(event)">
           <input id="q-answer" class="form-control form-control-lg mb-2" placeholder="Your answer" autocomplete="off" required>
           <textarea id="q-working" class="form-control mb-3" rows="2" placeholder="Working (optional, helps the AI diagnose)"></textarea>
-          <button class="btn btn-primary" id="q-submit">Submit</button>
+          <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-outline-secondary" id="q-prev" onclick="step(-1)">← Previous</button>
+            <button class="btn btn-primary" id="q-submit">Submit</button>
+            <button type="button" class="btn btn-outline-secondary" id="q-skip" onclick="step(1)">Skip →</button>
+            <button type="button" class="btn btn-outline-warning ms-auto" id="q-finish" onclick="finish()">Finish</button>
+          </div>
         </form>
         <div id="q-feedback" class="mt-3"></div>
       </div></section>
@@ -59,7 +72,8 @@
         <div class="text-secondary small">Diagnostic score</div>
         <div class="display-1" id="score-pct"></div>
         <div class="text-secondary mb-4" id="score-detail"></div>
-        <button class="btn btn-danger btn-lg" onclick="debug()">▶ Debug learning</button>
+        <button class="btn btn-outline-secondary btn-lg" onclick="go('test/0')">← Back to questions</button>
+        <button class="btn btn-danger btn-lg" id="debug-btn" onclick="runDebug()">▶ Debug learning</button>
       </div></section>
 
       <!-- debugger -->
@@ -70,7 +84,9 @@
           <div id="root-card"></div>
           <p class="mt-3 mb-1" id="expl-summary"></p>
           <p class="text-secondary small" id="expl-advice"></p>
-          <button class="btn btn-success" onclick="repair()">Repair the root</button>
+          <button class="btn btn-outline-secondary" onclick="go('score')">← Score</button>
+          <button class="btn btn-outline-secondary" onclick="runDebug()">↻ Re-run debug</button>
+          <button class="btn btn-success" id="repair-btn" onclick="startRepair()">Repair the root →</button>
         </div></div>
         <div class="card mb-3"><div class="card-body">
           <h6>Concept debt</h6>
@@ -87,8 +103,9 @@
         <h5>After repair</h5>
         <div class="display-6 mb-3" id="result-headline"></div>
         <table class="table table-sm small"><thead><tr><th>Concept</th><th>Before</th><th>After</th><th>Change</th></tr></thead><tbody id="result-rows"></tbody></table>
-        <button class="btn btn-outline-secondary" onclick="showDebugger()">Open debugger</button>
-        <button class="btn btn-outline-secondary" onclick="location.reload()">New session</button>
+        <button class="btn btn-outline-secondary" onclick="go('repair/0')">← Repair questions</button>
+        <button class="btn btn-outline-secondary" onclick="go('debug')">Debugger</button>
+        <button class="btn btn-outline-secondary" onclick="newSession()">New session</button>
       </div></section>
     </div>
 
@@ -96,6 +113,7 @@
       <div class="card"><div class="card-body">
         <div class="d-flex justify-content-between"><h6>Session</h6><a href="/docs" target="_blank" class="small">API docs ↗</a></div>
         <div class="small text-break" id="sess">—</div>
+        <button class="btn btn-sm btn-outline-danger mt-2 d-none" id="end-btn" onclick="newSession()">End session</button>
         <hr>
         <h6>Request log</h6>
         <div id="log" class="text-secondary"></div>
@@ -105,10 +123,29 @@
 </main>
 
 <script>
+// Routes live in the URL hash so the browser back/forward buttons work:
+// #start  #test/<i>  #score  #debug  #repair/<i>  #result
 const API = "/api";
-const state = { session: null, queue: [], index: 0, mode: "diagnostic" };
+const STORE = "conceptdebt.tester";
+const state = {
+  session: null,     // SessionOut
+  diagnostic: [],    // QuestionOut[]
+  repair: [],        // QuestionOut[] for the current root
+  answers: {},       // question_id -> AttemptOut (latest)
+  analysis: null,    // last AnalysisOut
+  result: null,      // last ReverifyOut
+};
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const sid = () => state.session?.session_id;
+const go = (route) => { if (location.hash === "#" + route) render(); else location.hash = route; };
+
+function save() {
+  try { localStorage.setItem(STORE, JSON.stringify({ session_id: sid(), repair: state.repair })); } catch {}
+}
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORE) || "{}"); } catch { return {}; }
+}
 
 async function call(method, path, body) {
   const res = await fetch(API + path, {
@@ -120,85 +157,205 @@ async function call(method, path, body) {
   return data;
 }
 
+// --- session ---------------------------------------------------------------
+
+async function openSession(session) {
+  state.session = session;
+  state.analysis = state.result = null;
+  state.answers = {};
+  for (const a of await call("GET", `/sessions/${session.session_id}/attempts`)) state.answers[a.question_id] = a;
+  if (!state.diagnostic.length) state.diagnostic = await call("GET", "/diagnostic");
+  save();
+}
+
+async function refreshSession() {
+  state.session = await call("GET", `/sessions/${sid()}`);
+  save();
+}
+
+async function start() {
+  state.repair = [];
+  await openSession(await call("POST", "/sessions", {}));
+  go("test/0");
+}
+
+async function startDemo() {
+  state.repair = [];
+  await openSession(await call("POST", "/demo/session"));
+  go("score");
+}
+
+async function resume(id = $("resume-id").value.trim()) {
+  if (!id) return;
+  const saved = load();
+  state.repair = saved.session_id === id ? saved.repair || [] : [];
+  await openSession(await call("GET", `/sessions/${id}`));
+  go(defaultRoute());
+}
+
+function continueSession() { go(defaultRoute()); }
+
+function newSession() {
+  state.session = null; state.repair = []; state.answers = {}; state.analysis = state.result = null;
+  try { localStorage.removeItem(STORE); } catch {}
+  go("start");
+}
+
+function defaultRoute() {
+  const p = state.session?.phase;
+  if (p === "done") return "result";
+  if (p === "repair" && state.repair.length) return "repair/0";
+  if (p === "debugged" || p === "repair") return "debug";
+  const next = state.diagnostic.findIndex((q) => !state.answers[q.id]);
+  return next === -1 ? "score" : `test/${next}`;
+}
+
+// --- navigation bar ----------------------------------------------------------
+
+function renderSteps(active) {
+  const p = state.session?.phase;
+  const answered = state.diagnostic.filter((q) => state.answers[q.id]).length;
+  const steps = [
+    ["start", "Start", true],
+    ["test/0", `Test ${answered}/${state.diagnostic.length || 13}`, !!state.session],
+    ["score", "Score", !!state.session && answered > 0],
+    ["debug", "Debugger", p && p !== "diagnostic"],
+    ["repair/0", "Repair", state.repair.length > 0],
+    ["result", "Result", p === "done"],
+  ];
+  $("steps").innerHTML = steps.map(([route, label, enabled]) => {
+    const on = route.split("/")[0] === active;
+    return `<li class="nav-item"><a class="nav-link ${on ? "active" : ""} ${enabled ? "" : "disabled"}" href="#${route}">${esc(label)}</a></li>`;
+  }).join("");
+  $("sess").innerHTML = state.session
+    ? `<code>${esc(sid())}</code><br>phase: ${esc(p)} · answered: ${state.session.answered}` : "—";
+  $("end-btn").classList.toggle("d-none", !state.session);
+}
+
 function show(view) {
   for (const v of ["start", "question", "score", "debug", "result"]) $("v-" + v).classList.toggle("d-none", v !== view);
 }
 
-function setSession(s) {
-  state.session = s;
-  $("sess").innerHTML = `<code>${esc(s.session_id)}</code><br>phase: ${esc(s.phase)} · answered: ${s.answered}`;
+async function render() {
+  const [route, arg] = location.hash.slice(1).split("/");
+  const needsSession = route && route !== "start";
+  if (needsSession && !state.session) return go("start");
+  renderSteps(route || "start");
+  try {
+    if (route === "test") return showQuestion("diagnostic", Number(arg) || 0);
+    if (route === "repair") {
+      if (!state.repair.length) return go("debug");
+      return showQuestion("repair", Number(arg) || 0);
+    }
+    if (route === "score") return showScore();
+    if (route === "debug") return showDebugger();
+    if (route === "result") return showResult();
+    showStart();
+  } catch (e) { console.error(e); }
 }
 
-async function start() {
-  setSession(await call("POST", "/sessions", {}));
-  state.queue = await call("GET", "/diagnostic");
-  state.index = 0; state.mode = "diagnostic";
-  nextQuestion();
+function showStart() {
+  $("continue-box").classList.toggle("d-none", !state.session);
+  if (state.session) {
+    $("continue-id").textContent = sid().slice(0, 10) + "…";
+    $("continue-phase").textContent = state.session.phase;
+  }
+  show("start");
 }
 
-async function startDemo() {
-  setSession(await call("POST", "/demo/session"));
-  showScore();
-}
+// --- questions -----------------------------------------------------------------
 
-async function resume() {
-  const id = $("resume-id").value.trim();
-  if (!id) return;
-  setSession(await call("GET", `/sessions/${id}`));
-  if (state.session.phase === "diagnostic") showScore(); else showDebugger();
-}
+function queueFor(mode) { return mode === "repair" ? state.repair : state.diagnostic; }
 
-function nextQuestion() {
-  if (state.index >= state.queue.length) return state.mode === "diagnostic" ? showScore() : reverify();
-  const q = state.queue[state.index];
-  $("q-label").textContent = `${state.mode} ${state.index + 1}/${state.queue.length}`;
+function showQuestion(mode, index) {
+  const queue = queueFor(mode);
+  index = Math.max(0, Math.min(index, queue.length - 1));
+  state.mode = mode; state.index = index;
+  const q = queue[index];
+  const prev = state.answers[q.id];
+
+  $("q-label").textContent = `${mode} ${index + 1}/${queue.length}`;
   $("q-concept").textContent = q.concept_name;
-  $("q-progress").style.width = `${(100 * state.index) / state.queue.length}%`;
+  $("q-pills").innerHTML = queue.map((x, i) => {
+    const a = state.answers[x.id];
+    const cls = !a ? "btn-outline-secondary" : mode === "repair" ? (a.correct ? "btn-success" : "btn-danger") : "btn-secondary";
+    return `<button type="button" class="btn btn-sm qpill ${cls} ${i === index ? "border border-2 border-light" : ""}" onclick="go('${mode === "repair" ? "repair" : "test"}/${i}')">${i + 1}</button>`;
+  }).join("");
   $("q-prompt").textContent = q.prompt;
-  $("q-answer").value = ""; $("q-working").value = ""; $("q-feedback").innerHTML = "";
+  $("q-answer").value = prev?.answer ?? "";
+  $("q-working").value = prev?.working ?? "";
+  $("q-feedback").innerHTML = prev && mode === "repair" ? feedback(prev) : prev ? `<span class="text-secondary small">answered, submit again to change it</span>` : "";
   $("q-submit").disabled = false;
+  $("q-submit").textContent = prev ? "Update answer" : "Submit";
+  $("q-prev").disabled = index === 0;
+  $("q-skip").textContent = index === queue.length - 1 ? "Skip" : "Skip →";
+  $("q-finish").textContent = mode === "repair" ? "See result" : "Finish test";
   state.startedAt = Date.now();
   show("question");
   $("q-answer").focus();
 }
 
+function feedback(a) {
+  return a.correct
+    ? `<span class="text-success">✓ correct</span>`
+    : `<span class="text-danger">✗ expected <code>${esc(a.correct_answer)}</code>${a.misconception ? ` · ${esc(a.misconception.name)}` : ""}</span>`;
+}
+
+function step(delta) {
+  const queue = queueFor(state.mode);
+  const next = state.index + delta;
+  if (next >= queue.length) return finish();
+  go(`${state.mode === "repair" ? "repair" : "test"}/${Math.max(0, next)}`);
+}
+
 async function submitAnswer(e) {
   e.preventDefault();
   $("q-submit").disabled = true;
-  const q = state.queue[state.index];
+  const q = queueFor(state.mode)[state.index];
   const r = await call("POST", "/attempts", {
-    session_id: state.session.session_id, question_id: q.id,
+    session_id: sid(), question_id: q.id,
     answer: $("q-answer").value, working: $("q-working").value || null, time_ms: Date.now() - state.startedAt,
-  });
+  }).catch(() => null);
+  $("q-submit").disabled = false;
+  if (!r) return;
+  state.answers[q.id] = r;
+  state.session.answered = Object.keys(state.answers).length;
   if (state.mode === "repair") {
-    $("q-feedback").innerHTML = r.correct
-      ? `<span class="text-success">✓ correct</span>`
-      : `<span class="text-danger">✗ expected <code>${esc(r.correct_answer)}</code>${r.misconception ? ` · ${esc(r.misconception.name)}` : ""}</span>`;
+    $("q-feedback").innerHTML = feedback(r);
     await new Promise((ok) => setTimeout(ok, 900));
   }
-  state.index++;
-  nextQuestion();
+  step(1);
 }
 
+async function finish() {
+  if (state.mode === "repair") return go("result");
+  const answered = state.diagnostic.filter((q) => state.answers[q.id]).length;
+  if (!answered) return alert("Answer at least one question first.");
+  if (answered < state.diagnostic.length && !confirm(`Only ${answered}/${state.diagnostic.length} answered. Finish anyway?`)) return;
+  go("score");
+}
+
+// --- score / debugger / repair / result --------------------------------------------
+
 async function showScore() {
-  const s = await call("GET", `/sessions/${state.session.session_id}/score`);
+  const s = await call("GET", `/sessions/${sid()}/score`);
   $("score-pct").textContent = `${Math.round(s.percent)}%`;
   $("score-detail").textContent = `${s.correct} of ${s.answered} correct`;
   show("score");
 }
 
-async function debug() {
-  render(await call("POST", `/sessions/${state.session.session_id}/debug`));
-  setSession(await call("GET", `/sessions/${state.session.session_id}`));
+async function runDebug() {
+  $("debug-btn").disabled = true;
+  try {
+    state.analysis = await call("POST", `/sessions/${sid()}/debug`);
+    state.repair = []; state.result = null;  // new diagnosis, old repair set no longer applies
+    await refreshSession();
+  } finally { $("debug-btn").disabled = false; }
+  go("debug");
 }
 
 async function showDebugger() {
-  render(await call("GET", `/sessions/${state.session.session_id}/debt`));
-}
-
-const badge = { root: "danger", trace: "warning", failed: "secondary", at_risk: "dark", ok: "light" };
-
-async function render(a) {
+  const a = state.analysis ?? await call("GET", `/sessions/${sid()}/debt`);
   $("trace").innerHTML = a.trace.length
     ? a.trace.map((t) => `<span>${esc(t.name)} <small class="text-secondary">${t.debt}%</small></span>`).join("")
     : `<span class="text-secondary">no single root found</span>`;
@@ -208,6 +365,8 @@ async function render(a) {
       ${a.root.mistakes} mistakes across ${a.root.affected_topics.length} topics
       <div class="small mt-1">${a.root.misconceptions.map((m) => `${esc(m.name)} ×${m.count}`).join(" · ")}</div>
     </div>` : "";
+  $("repair-btn").disabled = !a.root;
+  $("repair-btn").textContent = state.repair.length ? "Continue repair →" : "Repair the root →";
   $("expl-summary").textContent = a.explanation.summary;
   $("expl-advice").textContent = `${a.explanation.advice}  [${a.explanation.source}]`;
   $("debt-rows").innerHTML = a.concepts.map((c) => `
@@ -216,30 +375,51 @@ async function render(a) {
       <td>${c.mistakes}</td><td>${c.affected_topics.length}</td>
       <td><span class="badge text-bg-${badge[c.status]}">${c.status}</span></td></tr>`).join("");
 
-  const g = await call("GET", `/graph?session_id=${state.session.session_id}`);
+  const g = await call("GET", `/graph?session_id=${sid()}`);
   const levels = [...new Set(g.nodes.map((n) => n.level))].sort();
   $("graph").innerHTML = levels.map((l) => `<div class="col">${g.nodes.filter((n) => n.level === l).map((n) =>
     `<div class="node ${n.status}" title="${esc(n.description)}">${esc(n.name)}${n.debt >= 1 ? ` <b>${n.debt}%</b>` : ""}</div>`).join("")}</div>`).join("");
   show("debug");
 }
+const badge = { root: "danger", trace: "warning", failed: "secondary", at_risk: "dark", ok: "light" };
 
-async function repair() {
-  const r = await call("POST", `/sessions/${state.session.session_id}/repair?count=3`);
-  state.queue = r.questions; state.index = 0; state.mode = "repair";
-  nextQuestion();
+async function startRepair() {
+  if (!state.repair.length) {
+    const r = await call("POST", `/sessions/${sid()}/repair?count=3`);
+    state.repair = r.questions;
+    await refreshSession();
+  }
+  const next = state.repair.findIndex((q) => !state.answers[q.id]);
+  go(`repair/${next === -1 ? 0 : next}`);
 }
 
-async function reverify() {
-  const r = await call("POST", `/sessions/${state.session.session_id}/reverify`);
-  setSession(await call("GET", `/sessions/${state.session.session_id}`));
+async function showResult() {
+  // re-verify every time the page opens, so changed repair answers show up
+  const r = (state.result = await call("POST", `/sessions/${sid()}/reverify`));
+  await refreshSession();
+  renderSteps("result");
   $("result-headline").innerHTML = `${esc(r.root_concept_id)}: <span class="text-danger">${r.root_before}%</span> → <span class="text-success">${r.root_after}%</span>
     <div class="fs-6 text-secondary">${r.repair_correct}/${r.repair_answered} repair questions correct</div>`;
   $("result-rows").innerHTML = r.changes.map((c) =>
     `<tr><td>${esc(c.name)}</td><td>${c.before}</td><td>${c.after}</td><td class="${c.change < 0 ? "text-success" : "text-danger"}">${c.change}</td></tr>`).join("");
+  state.analysis = r.analysis;
   show("result");
 }
 
-call("GET", "/health").then((h) => { $("health").textContent = h.ai_enabled ? `AI: ${h.ai_model}` : "AI: off (rules + templates)"; });
+// --- boot ----------------------------------------------------------------------
+
+window.addEventListener("hashchange", render);
+(async () => {
+  call("GET", "/health").then((h) => { $("health").textContent = h.ai_enabled ? `AI: ${h.ai_model}` : "AI: off (rules + templates)"; });
+  const saved = load();
+  if (saved.session_id) {
+    try {
+      state.repair = saved.repair || [];
+      await openSession(await call("GET", `/sessions/${saved.session_id}`));
+    } catch { newSession(); return; }
+  }
+  render();
+})();
 </script>
 </body>
 </html>

@@ -27,6 +27,7 @@ Put your Featherless key in `backend/.env` (`AI_API_KEY=`) to switch the AI on.
 - Test UI: http://localhost:8000/
 - API docs: http://localhost:8000/docs
 - Frontend integration spec: [`docs/API.md`](docs/API.md)
+- Test checklist: [`docs/TESTING.md`](docs/TESTING.md)
 
 The database (SQLite by default) is created and seeded on first start.
 Reset it with `python -m app.seed --reset`. Run tests with `pytest`.

@@ -136,6 +136,8 @@ Response:
   "attempt_id": 5,
   "question_id": "d05",
   "mode": "diagnostic",
+  "answer": "3x + 2",
+  "working": "3 times x is 3x, plus 2",
   "correct": false,
   "correct_answer": "3x + 6",
   "misconception": { "id": "partial_distribution", "name": "Distributes to the first term only" },
@@ -152,6 +154,11 @@ Response:
 | `ai` | the AI classified it from the answer and working | ≤ 0.85 |
 | `unclassified` | wrong, cause unknown (still counts as weak evidence) | 0.3 |
 
+**Re-answering is allowed.** Posting again for the same `question_id` in the same
+session **replaces** the earlier attempt (it doesn't count twice), so a "Previous"
+button can just re-submit. Use `GET /sessions/{id}/attempts` to prefill answers
+after a page refresh.
+
 **Demo tip:** during the diagnostic, don't show right/wrong. The reveal on the
 score screen is the point of the demo. In repair mode, show it immediately.
 
@@ -159,7 +166,7 @@ The AI call adds a second or two to wrong answers that aren't recognised. Show a
 spinner on the submit button.
 
 ### `GET /api/sessions/{session_id}/attempts`
-Array of the attempt objects above, oldest first.
+Array of the attempt objects above (one per question, the latest answer), oldest first.
 
 ---
 
@@ -367,7 +374,7 @@ export interface AttemptIn { session_id: string; question_id: string; answer: st
 export interface MisconceptionRef { id: string; name: string }
 export interface MisconceptionCount extends MisconceptionRef { count: number }
 export interface AttemptOut {
-  attempt_id: number; question_id: string; mode: "diagnostic" | "repair"; correct: boolean; correct_answer: string;
+  attempt_id: number; question_id: string; mode: "diagnostic" | "repair"; answer: string; working: string | null; correct: boolean; correct_answer: string;
   misconception: MisconceptionRef | null; confidence: number; source: "rule" | "ai" | "unclassified" | "correct"; rationale: string | null;
 }
 export interface ScoreOut { session_id: string; answered: number; correct: number; total_questions: number; percent: number }

@@ -69,6 +69,13 @@ def record_attempt(
                 confidence, source = UNCLASSIFIED_CONFIDENCE, "unclassified"
                 rationale = result[2] if result else None
 
+    # one answer per question: re-answering (e.g. after going back) replaces the
+    # earlier attempt, so the same question never counts as evidence twice
+    for old in db.exec(
+        select(Attempt).where(Attempt.session_id == session.id, Attempt.question_id == question.id)
+    ).all():
+        db.delete(old)
+
     attempt = Attempt(
         session_id=session.id,
         question_id=question.id,

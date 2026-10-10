@@ -41,6 +41,15 @@ def test_attempt_detects_misconception(client):
     assert r["source"] == "unclassified" and r["confidence"] == 0.3
 
 
+def test_reanswer_replaces_previous_attempt(client):
+    sid = client.post("/api/sessions", json={}).json()["session_id"]
+    client.post("/api/attempts", json={"session_id": sid, "question_id": "d05", "answer": "3x+2"})
+    client.post("/api/attempts", json={"session_id": sid, "question_id": "d05", "answer": "3x+6"})
+    attempts = client.get(f"/api/sessions/{sid}/attempts").json()
+    assert len(attempts) == 1 and attempts[0]["correct"] is True
+    assert client.get(f"/api/sessions/{sid}/debt").json()["wrong"] == 0
+
+
 def test_graph_and_content(client):
     g = client.get("/api/graph").json()
     assert len(g["nodes"]) == 25
