@@ -4,14 +4,15 @@
 def test_demo_flow(client):
     s = client.post("/api/demo/session").json()
     sid = s["session_id"]
-    assert s["answered"] == 13
+    assert s["answered"] == 15 and s["grade"] == 10
 
     score = client.get(f"/api/sessions/{sid}/score").json()
-    assert score["correct"] == 6 and score["answered"] == 13
+    assert score["correct"] == 8 and score["answered"] == 15
 
     analysis = client.post(f"/api/sessions/{sid}/debug").json()
     root = analysis["root"]
     assert root["concept_id"] == "distributive"
+    assert root["grade"] == 7 and root["ncert"] == "Class 7 · Algebraic Expressions"
     assert root["debt"] >= 80
     assert root["mistakes"] == 6
     assert analysis["trace"][-1]["concept_id"] == "distributive"
@@ -52,10 +53,10 @@ def test_reanswer_replaces_previous_attempt(client):
 
 def test_graph_and_content(client):
     g = client.get("/api/graph").json()
-    assert len(g["nodes"]) == 25
+    assert len(g["nodes"]) == 26
     assert {"source": "distributive", "target": "alg_manip", "id": "distributive->alg_manip"} in g["edges"]
     qs = client.get("/api/diagnostic").json()
-    assert len(qs) == 13 and "answer" not in qs[0]
+    assert len(qs) == 15 and "answer" not in qs[0]
     assert client.get("/api/health").json()["ai_enabled"] is False
 
 

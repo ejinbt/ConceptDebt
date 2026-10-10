@@ -15,6 +15,10 @@ from .models import Attempt, Concept, DebtSnapshot, Misconception, Prerequisite,
 
 RULE_CONFIDENCE = 0.9
 UNCLASSIFIED_CONFIDENCE = 0.3
+# stored, but never evidence: gibberish, and questions the student hasn't been taught yet
+IGNORED_SOURCES = {"invalid", "not_learned"}
+GRADES = (8, 9, 10)
+DEFAULT_GRADE = 10
 
 
 # --- loading -----------------------------------------------------------------
@@ -26,6 +30,16 @@ def load_graph(db: Session) -> ConceptGraph:
     for edge in db.exec(select(Prerequisite)).all():
         requires[edge.concept_id].append(edge.requires_id)
     return ConceptGraph([ConceptNode(c.id, c.name, c.level, sorted(requires[c.id])) for c in concepts])
+
+
+def concept_meta(db: Session) -> dict[str, Concept]:
+    return {c.id: c for c in db.exec(select(Concept)).all()}
+
+
+def diagnostic_questions(db: Session, grade: int) -> list[Question]:
+    return list(db.exec(
+        select(Question).where(Question.is_repair == False, Question.grade == grade).order_by(Question.id)  # noqa: E712
+    ).all())
 
 
 def get_session(db: Session, session_id: str) -> StudySession:
@@ -49,11 +63,15 @@ def record_attempt(
     answer: str,
     working: Optional[str],
     time_ms: Optional[int],
+    not_learned: bool = False,
 ) -> Attempt:
-    correct = checker.check(question.kind, question.answer, answer)
+    correct = False if not_learned else checker.check(question.kind, question.answer, answer)
     misconception_id, confidence, source, rationale = None, 0.0, "correct", None
 
-    if not correct and not checker.is_valid_answer(question.kind, answer, question.answer, question.prompt):
+    if not_learned:
+        # not taught yet is not debt: store it, but scoring ignores it
+        source, rationale = "not_learned", "Marked as not learned yet."
+    elif not correct and not checker.is_valid_answer(question.kind, answer, question.answer, question.prompt):
         # gibberish is not evidence of a misconception: store it, but scoring ignores it
         source, rationale = "invalid", "This doesn't look like a maths answer for this question."
     elif not correct:
@@ -111,8 +129,12 @@ def candidate_misconceptions(db: Session, concept_id: str) -> list[dict]:
 
 def analyse(db: Session, session_id: str) -> tuple[ConceptGraph, dict[str, ConceptDebt], Optional[RootCause], list[Attempt]]:
     graph = load_graph(db)
-    attempts = [a for a in session_attempts(db, session_id) if a.source != "invalid"]
     questions = {q.id: q for q in db.exec(select(Question)).all()}
+    attempts = [
+        a for a in session_attempts(db, session_id)
+        if a.source not in IGNORED_SOURCES and a.question_id in questions
+        and questions[a.question_id].concept_id in graph.nodes
+    ]
     mis_concept = {m.id: m.concept_id for m in db.exec(select(Misconception)).all()}
     evidence = [
         AttemptEvidence(
@@ -128,7 +150,9 @@ def analyse(db: Session, session_id: str) -> tuple[ConceptGraph, dict[str, Conce
     return graph, debts, find_root(graph, debts), attempts
 
 
-def concept_status(cid: str, debt: float, root: Optional[RootCause], failed: set[str]) -> str:
+def concept_status(cid: str, debt: float, root: Optional[RootCause], failed: set[str], locked: bool = False) -> str:
+    if locked:
+        return "locked"
     if root and cid == root.concept_id:
         return "root"
     if root and cid in root.path:
@@ -140,18 +164,23 @@ def concept_status(cid: str, debt: float, root: Optional[RootCause], failed: set
     return "ok"
 
 
-def debt_rows(db: Session, graph: ConceptGraph, debts: dict[str, ConceptDebt], root: Optional[RootCause], min_debt: float = 1.0) -> list[dict]:
+def debt_rows(db: Session, graph: ConceptGraph, debts: dict[str, ConceptDebt], root: Optional[RootCause],
+              max_grade: int = 12, min_debt: float = 1.0) -> list[dict]:
     names = {m.id: m.name for m in db.exec(select(Misconception)).all()}
+    meta = concept_meta(db)
     failed = {t for d in debts.values() for t in d.affected_topics}
     rows = []
     for cid, d in debts.items():
-        if d.debt < min_debt:
+        # never show debt on chapters the student hasn't reached
+        if d.debt < min_debt or meta[cid].grade > max_grade:
             continue
         node = graph.nodes[cid]
         rows.append({
             "concept_id": cid,
             "name": node.name,
             "level": node.level,
+            "grade": meta[cid].grade,
+            "ncert": meta[cid].ncert,
             "debt": round(d.debt, 1),
             "mistakes": d.mistakes,
             "evidence_count": d.evidence_count,
@@ -175,8 +204,10 @@ def evidence_summary(graph: ConceptGraph, debts: dict[str, ConceptDebt], root: O
     }
     if root:
         d = debts[root.concept_id]
+        meta = concept_meta(db)[root.concept_id]
         summary["root"] = {
             "concept": graph.nodes[root.concept_id].name,
+            "ncert_chapter_to_revise": meta.ncert,
             "debt_percent": round(d.debt),
             "mistakes_traced_to_it": d.mistakes,
             "affected_topics": [graph.nodes[t].name for t in sorted(d.affected_topics) if t != root.concept_id],
@@ -201,7 +232,10 @@ def template_explanation(summary: dict) -> dict:
             f"{root['mistakes_traced_to_it']} of your {summary['wrong']} mistakes trace back to "
             f"{root['concept']}. Because later topics build on it, it is also breaking {topics}."
         ),
-        "advice": f"Practise {root['concept']} on its own before going back to the harder topics.",
+        "advice": (
+            f"Revise NCERT {root['ncert_chapter_to_revise']} ({root['concept']}) "
+            "before going back to the harder topics."
+        ),
         "source": "template",
     }
 
@@ -209,6 +243,8 @@ def template_explanation(summary: dict) -> dict:
 def build_analysis(db: Session, session: StudySession, use_ai: bool) -> dict:
     graph, debts, root, attempts = analyse(db, session.id)
     summary = evidence_summary(graph, debts, root, attempts, db)
+    summary["student_class"] = session.grade
+    meta = concept_meta(db)
     explanation = (ai.explain(summary) if use_ai else None) or template_explanation(summary)
     root_out = None
     if root:
@@ -217,6 +253,8 @@ def build_analysis(db: Session, session: StudySession, use_ai: bool) -> dict:
         root_out = {
             "concept_id": root.concept_id,
             "name": graph.nodes[root.concept_id].name,
+            "grade": meta[root.concept_id].grade,
+            "ncert": meta[root.concept_id].ncert,
             "debt": round(d.debt, 1),
             "confidence": round(d.confidence, 2),
             "coverage": round(root.coverage, 2),
@@ -224,14 +262,17 @@ def build_analysis(db: Session, session: StudySession, use_ai: bool) -> dict:
             "affected_topics": sorted(t for t in d.affected_topics if t != root.concept_id),
             "misconceptions": [{"id": m, "name": names.get(m, m), "count": n} for m, n in d.misconceptions.items()],
         }
+    not_learned = sum(a.source == "not_learned" for a in session_attempts(db, session.id))
     return {
         "session_id": session.id,
+        "grade": session.grade,
         "phase": session.phase,
         "answered": len(attempts),
+        "not_learned": not_learned,
         "wrong": summary["wrong"],
         "root": root_out,
         "trace": [{"concept_id": c, "name": graph.nodes[c].name, "debt": round(debts[c].debt, 1)} for c in (root.path if root else [])],
-        "concepts": debt_rows(db, graph, debts, root),
+        "concepts": debt_rows(db, graph, debts, root, max_grade=session.grade),
         "explanation": explanation,
     }
 
@@ -269,7 +310,8 @@ def repair_questions(db: Session, session: StudySession, count: int) -> list[Que
         for m in db.exec(select(Misconception).where(Misconception.concept_id == concept_id)).all()
     ]
     generated = ai.generate_repair_questions(
-        {"name": concept.name, "description": concept.description}, misconceptions, count - len(fresh)
+        {"name": concept.name, "description": concept.description, "ncert": concept.ncert},
+        misconceptions, count - len(fresh), session.grade,
     )
     for g in generated or []:
         q = Question(

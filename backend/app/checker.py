@@ -22,6 +22,9 @@ def _normalise(text: str) -> str:
     text = text.strip().lower()
     for old, new in _REPLACEMENTS.items():
         text = text.replace(old, new)
+    # "√12" / "2√3" / "√(x+1)" -> sqrt(...); "20%" / "₹600" -> plain numbers
+    text = re.sub(r"√\s*(\d+|[a-z])", r"sqrt(\1)", text).replace("√", "sqrt")
+    text = text.replace("%", "").replace("₹", "")
     # "x = 5" -> "5": keep what follows the last equals sign
     if "=" in text:
         text = text.rsplit("=", 1)[1]

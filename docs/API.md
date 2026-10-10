@@ -18,9 +18,9 @@ you can call every endpoint from there). The raw schema is in
 ## 1. The flow
 
 ```
-POST /sessions ─▶ GET /diagnostic ─▶ POST /attempts (×13)
+GET /classes ─▶ POST /sessions {grade} ─▶ GET /diagnostic?session_id= ─▶ POST /attempts (×15)
                                           │
-              GET /sessions/{id}/score ◀──┘   ← show the plain "46%" (the symptom)
+              GET /sessions/{id}/score ◀──┘   ← show the plain "53%" (the symptom)
                      │
          POST /sessions/{id}/debug             ← "Debug learning": root, trace, debt table
          GET  /graph?session_id={id}           ← coloured concept graph
@@ -28,7 +28,7 @@ POST /sessions ─▶ GET /diagnostic ─▶ POST /attempts (×13)
          POST /sessions/{id}/repair            ← 3 questions on the root concept
          POST /attempts (×3)                   ← same endpoint as the diagnostic
                      │
-         POST /sessions/{id}/reverify          ← before/after: 85.2% → 24.5%
+         POST /sessions/{id}/reverify          ← before/after: 86.4% → 23.3%
 ```
 
 The session `phase` moves `diagnostic → debugged → repair → done`.
@@ -38,6 +38,20 @@ diagnostic already answered by the scripted demo student (weak on the distributi
 property). Go straight to `/score` or `/debug` with it.
 
 ---
+
+### NCERT classes: the rules
+
+The student picks the **class they've completed: 8, 9 or 10** (default 10).
+
+- The diagnostic only asks about **that class and earlier ones**. Nothing they haven't been taught.
+- A root cause is only ever found in **the same or an earlier class**. Tracing goes downwards only:
+  *"Class 10 Quadratic Equations is failing because of Class 7 Distributive Property."*
+- Concepts **above** the student's class come back from `/graph` with `status: "locked"` and are
+  never listed in the debt table. Grey them out.
+- Every question has a **"Haven't learned this yet"** option (`not_learned: true` on `/attempts`).
+  It's stored but never counts as debt or as a wrong answer.
+- Concepts and roots carry `grade` and `ncert` (e.g. `"Class 7 · Algebraic Expressions"`),
+  so the UI can say **"Revise NCERT Class 7 · Algebraic Expressions"**.
 
 ## 2. Answer format (what students can type)
 
@@ -84,11 +98,14 @@ aren't classified. Everything else works the same.
 ---
 
 ### `POST /api/sessions` → `201`
-Body is optional: `{ "label": "alex" }` (a nickname, max 80 chars; don't send real names or emails).
+Body (all optional): `{ "grade": 9, "label": "alex" }`.
+`grade` is the NCERT class completed, `8`, `9` or `10` (default `10`; anything else is `422`).
+`label` is a nickname, max 80 chars; don't send real names or emails.
 ```json
 {
   "session_id": "685d5ad4f2ee4e9e9a60f0985fcb2c87",
   "label": null,
+  "grade": 9,
   "phase": "diagnostic",
   "root_concept_id": null,
   "answered": 0,
@@ -100,18 +117,30 @@ Body is optional: `{ "label": "alex" }` (a nickname, max 80 chars; don't send re
 Same shape as above. Use it to restore a session after a page refresh.
 
 ### `POST /api/demo/session` → `201`
-No body. Same shape, with `answered: 13` and `label: "demo"`.
+No body. Same shape, with `grade: 10`, `answered: 15` and `label: "demo"`.
 
 ---
 
-### `GET /api/diagnostic`
-The 13 diagnostic questions, in order. **Answers are not included.**
+### `GET /api/classes`
+The options for the class picker.
+```json
+[
+  { "grade": 8,  "label": "Class 8",  "questions": 12 },
+  { "grade": 9,  "label": "Class 9",  "questions": 12 },
+  { "grade": 10, "label": "Class 10", "questions": 15 }
+]
+```
+
+### `GET /api/diagnostic?session_id={id}`
+The diagnostic **for the session's class**, in order. **Answers are not included.**
+Pass `session_id` (recommended) or `grade=8|9|10`; with neither you get Class 10.
 ```json
 [
   {
     "id": "d01",
     "concept_id": "fractions",
-    "concept_name": "Fraction Operations",
+    "concept_name": "Fractions",
+    "ncert": "Class 6 · Fractions",
     "kind": "number",
     "prompt": "Work out 1/2 + 1/3",
     "is_repair": false
@@ -134,6 +163,8 @@ Request:
   "time_ms": 14200
 }
 ```
+**"Haven't learned this yet":** send `{ "session_id": "...", "question_id": "d14", "not_learned": true }`
+(no `answer` needed). Answering the question for real later replaces the mark.
 `working` (optional, ≤2000 chars) is the student's explanation; the AI reads it when the
 wrong answer isn't a known one. `time_ms` is optional.
 
@@ -160,6 +191,7 @@ Response:
 | `rule` | matched a known wrong answer for this question | 0.9 |
 | `ai` | the AI classified it from the answer and working | ≤ 0.85 |
 | `unclassified` | wrong, cause unknown (still counts as weak evidence) | 0.3 |
+| `not_learned` | the student pressed "Haven't learned this yet". **Ignored by scoring and the score** | 0 |
 | `invalid` | not a maths answer (`hello`, `)))`, `idk`, letters that aren't in the question). **Ignored by scoring and the score.** Ask the student to re-enter it | 0 |
 
 **Re-answering is allowed.** Posting again for the same `question_id` in the same
@@ -181,7 +213,7 @@ Array of the attempt objects above (one per question, the latest answer), oldest
 ### `GET /api/sessions/{session_id}/score`
 The plain score, the "symptom" screen from the demo.
 ```json
-{ "session_id": "685d...", "answered": 13, "correct": 6, "total_questions": 13, "percent": 46.2 }
+{ "session_id": "685d...", "answered": 15, "correct": 8, "total_questions": 15, "percent": 53.3 }
 ```
 
 ---
@@ -194,13 +226,17 @@ May take a few seconds when AI is on (it writes the explanation).
 ```json
 {
   "session_id": "685d...",
+  "grade": 10,
   "phase": "debugged",
-  "answered": 13,
+  "answered": 15,
+  "not_learned": 0,
   "wrong": 7,
   "root": {
     "concept_id": "distributive",
     "name": "Distributive Property",
-    "debt": 85.2,
+    "grade": 7,
+    "ncert": "Class 7 · Algebraic Expressions",
+    "debt": 86.4,
     "confidence": 0.9,
     "coverage": 1.0,
     "mistakes": 6,
@@ -211,16 +247,18 @@ May take a few seconds when AI is on (it writes the explanation).
     ]
   },
   "trace": [
-    { "concept_id": "quadratics",   "name": "Quadratic Equations",   "debt": 8.2 },
-    { "concept_id": "expanding",    "name": "Expanding Products",    "debt": 32.3 },
-    { "concept_id": "distributive", "name": "Distributive Property", "debt": 85.2 }
+    { "concept_id": "quadratics",   "name": "Quadratic Equations",   "debt": 8.8 },
+    { "concept_id": "expanding",    "name": "Algebraic Identities",  "debt": 34.3 },
+    { "concept_id": "distributive", "name": "Distributive Property", "debt": 86.4 }
   ],
   "concepts": [
     {
       "concept_id": "distributive",
       "name": "Distributive Property",
       "level": 1,
-      "debt": 85.2,
+      "grade": 7,
+      "ncert": "Class 7 · Algebraic Expressions",
+      "debt": 86.4,
       "mistakes": 6,
       "evidence_count": 7,
       "confidence": 0.9,
@@ -230,8 +268,8 @@ May take a few seconds when AI is on (it writes the explanation).
     }
   ],
   "explanation": {
-    "summary": "6 of your 7 mistakes trace back to Distributive Property. Because later topics build on it, it is also breaking Algebraic Manipulation, Expanding Products, Factoring, Linear Equations, Quadratic Equations.",
-    "advice": "Practise Distributive Property on its own before going back to the harder topics.",
+    "summary": "6 of your 7 mistakes trace back to Distributive Property. Because later topics build on it, it is also breaking Simplifying Expressions, Algebraic Identities, Factorisation, Linear Equations in One Variable, Quadratic Equations.",
+    "advice": "Revise NCERT Class 7 · Algebraic Expressions (Distributive Property) before going back to the harder topics.",
     "source": "template"
   }
 }
@@ -241,7 +279,7 @@ How to use each part:
 
 | Field | UI |
 |---|---|
-| `root` | The big diagnosis card: *"Distributive Property: 85% debt, 90% confidence, 6 mistakes across 5 topics"*. `null` if there's no clear root (e.g. no mistakes). |
+| `root` | The big diagnosis card: *"Distributive Property (Class 7): 86% debt, 90% confidence, 6 mistakes across 5 topics. Revise NCERT Class 7 · Algebraic Expressions"*. `null` if there's no clear root (e.g. no mistakes). |
 | `trace` | The animated chain. **Ordered from the failed advanced topic down to the root**: animate left to right / top to bottom, ending on the root. |
 | `concepts` | Debt dashboard cards/table. Only concepts with debt ≥ 1, sorted highest first. |
 | `explanation` | Plain-language text under the diagnosis. `source` is `ai` or `template`. |
@@ -263,8 +301,13 @@ Nodes and edges for **React Flow** or D3. Omit `session_id` for the plain graph 
 {
   "nodes": [
     { "id": "distributive", "name": "Distributive Property", "level": 1,
+      "grade": 7, "ncert": "Class 7 · Algebraic Expressions",
       "description": "Multiplying a factor across every term inside brackets: a(b + c) = ab + ac.",
-      "debt": 85.2, "status": "root" }
+      "debt": 86.4, "status": "root" },
+    { "id": "limits", "name": "Limits and Derivatives", "level": 5,
+      "grade": 11, "ncert": "Class 11 · Limits and Derivatives",
+      "description": "The value a function approaches, and rate of change.",
+      "debt": 0.0, "status": "locked" }
   ],
   "edges": [
     { "id": "distributive->alg_manip", "source": "distributive", "target": "alg_manip" }
@@ -272,8 +315,8 @@ Nodes and edges for **React Flow** or D3. Omit `session_id` for the plain graph 
 }
 ```
 - Edges point **from the prerequisite to the concept that depends on it**, so the
-  graph flows from foundations (level 0) to calculus (level 5).
-- `level` (0–5) is a ready-made layout column/row. 25 nodes total.
+  graph flows from Class 6 foundations to Class 11.
+- `level` = `grade − 6` (0 = Class 6 … 5 = Class 11): a ready-made layout column. 26 nodes total.
 
 `status` values (same in `/debug` → `concepts[]`):
 
@@ -284,6 +327,7 @@ Nodes and edges for **React Flow** or D3. Omit `session_id` for the plain graph 
 | `failed` | the student got a question on this concept wrong | dark red / outline |
 | `at_risk` | debt ≥ 10 from propagated evidence | muted amber |
 | `ok` | nothing to see | neutral |
+| `locked` | above the student's class: not taught yet, never shows debt | greyed out / 🔒 |
 
 React Flow mapping:
 ```ts
@@ -307,7 +351,8 @@ const rfEdges = edges.map(e => ({ ...e, animated: false }));
 The full concept list with prerequisites and known misconceptions.
 ```json
 [
-  { "id": "linear_eq", "name": "Linear Equations", "level": 2,
+  { "id": "linear_eq", "name": "Linear Equations in One Variable", "level": 2,
+    "grade": 8, "ncert": "Class 8 · Linear Equations in One Variable",
     "description": "Solving equations of the form ax + b = c, including with brackets.",
     "prerequisites": ["alg_manip", "equality"],
     "misconceptions": [] }
@@ -322,7 +367,7 @@ sets phase to `repair`. `409` if `/debug` hasn't found a root yet.
 ```json
 {
   "session_id": "685d...",
-  "root": { "concept_id": "distributive", "name": "Distributive Property", "debt": 85.2 },
+  "root": { "concept_id": "distributive", "name": "Distributive Property", "debt": 86.4 },
   "questions": [
     { "id": "r-dist-1", "concept_id": "distributive", "concept_name": "Distributive Property",
       "kind": "expression", "prompt": "Expand 4(x + 5)", "is_repair": true }
@@ -339,11 +384,11 @@ sets phase to `done`. `409` if `/debug` was never called.
 {
   "session_id": "685d...",
   "root_concept_id": "distributive",
-  "root_before": 85.2,
-  "root_after": 24.5,
+  "root_before": 86.4,
+  "root_after": 23.3,
   "changes": [
-    { "concept_id": "distributive", "name": "Distributive Property", "before": 85.2, "after": 24.5, "change": -60.7 },
-    { "concept_id": "order_ops", "name": "Order of Operations", "before": 18.9, "after": 0.0, "change": -18.9 }
+    { "concept_id": "distributive", "name": "Distributive Property", "before": 86.4, "after": 23.3, "change": -63.1 },
+    { "concept_id": "order_ops", "name": "Order of Operations (BODMAS)", "before": 21.4, "after": 0.0, "change": -21.4 }
   ],
   "repair_answered": 3,
   "repair_correct": 3,
@@ -373,33 +418,35 @@ Class-level totals from every debugged session.
 
 ```ts
 export type Phase = "diagnostic" | "debugged" | "repair" | "done";
-export type Status = "root" | "trace" | "failed" | "at_risk" | "ok";
+export type Status = "root" | "trace" | "failed" | "at_risk" | "ok" | "locked";
+export type Grade = 8 | 9 | 10;
 export type Kind = "number" | "expression" | "factored";
 
-export interface SessionOut { session_id: string; label: string | null; phase: Phase; root_concept_id: string | null; answered: number; created_at: string }
-export interface QuestionOut { id: string; concept_id: string; concept_name: string; kind: Kind; prompt: string; is_repair: boolean }
-export interface AttemptIn { session_id: string; question_id: string; answer: string; working?: string | null; time_ms?: number | null }
+export interface ClassOut { grade: Grade; label: string; questions: number }
+export interface SessionOut { session_id: string; label: string | null; grade: Grade; phase: Phase; root_concept_id: string | null; answered: number; created_at: string }
+export interface QuestionOut { id: string; concept_id: string; concept_name: string; ncert: string; kind: Kind; prompt: string; is_repair: boolean }
+export interface AttemptIn { session_id: string; question_id: string; answer?: string; working?: string | null; time_ms?: number | null; not_learned?: boolean }
 export interface MisconceptionRef { id: string; name: string }
 export interface MisconceptionCount extends MisconceptionRef { count: number }
 export interface AttemptOut {
   attempt_id: number; question_id: string; mode: "diagnostic" | "repair"; answer: string; working: string | null; correct: boolean; correct_answer: string;
-  misconception: MisconceptionRef | null; confidence: number; source: "rule" | "ai" | "unclassified" | "correct" | "invalid"; rationale: string | null;
+  misconception: MisconceptionRef | null; confidence: number; source: "rule" | "ai" | "unclassified" | "correct" | "invalid" | "not_learned"; rationale: string | null;
 }
 export interface ScoreOut { session_id: string; answered: number; correct: number; total_questions: number; percent: number }
 export interface ConceptDebt {
-  concept_id: string; name: string; level: number; debt: number; mistakes: number; evidence_count: number;
+  concept_id: string; name: string; level: number; grade: number; ncert: string; debt: number; mistakes: number; evidence_count: number;
   confidence: number; affected_topics: string[]; misconceptions: MisconceptionCount[]; status: Status;
 }
-export interface Root { concept_id: string; name: string; debt: number; confidence: number; coverage: number; mistakes: number; affected_topics: string[]; misconceptions: MisconceptionCount[] }
+export interface Root { concept_id: string; name: string; grade: number; ncert: string; debt: number; confidence: number; coverage: number; mistakes: number; affected_topics: string[]; misconceptions: MisconceptionCount[] }
 export interface TraceStep { concept_id: string; name: string; debt: number }
 export interface Analysis {
-  session_id: string; phase: Phase; answered: number; wrong: number; root: Root | null; trace: TraceStep[];
+  session_id: string; grade: Grade; phase: Phase; answered: number; not_learned: number; wrong: number; root: Root | null; trace: TraceStep[];
   concepts: ConceptDebt[]; explanation: { summary: string; advice: string; source: "ai" | "template" };
 }
 export interface RepairOut { session_id: string; root: TraceStep; questions: QuestionOut[] }
 export interface DebtChange { concept_id: string; name: string; before: number; after: number; change: number }
 export interface ReverifyOut { session_id: string; root_concept_id: string | null; root_before: number; root_after: number; changes: DebtChange[]; repair_answered: number; repair_correct: number; analysis: Analysis }
-export interface GraphNode { id: string; name: string; level: number; description: string; debt: number; status: Status }
+export interface GraphNode { id: string; name: string; level: number; grade: number; ncert: string; description: string; debt: number; status: Status }
 export interface GraphEdge { id: string; source: string; target: string }
 ```
 
@@ -419,11 +466,11 @@ async function api<T>(method: string, path: string, body?: unknown): Promise<T> 
 
 ## 5. Demo script (what the judges see)
 
-1. `POST /demo/session` (or answer for real) → `GET /score` → show **46%**, nothing else.
+1. `POST /demo/session` (or answer for real) → `GET /score` → show **53%**, nothing else.
 2. Click **Debug learning** → `POST /debug` → animate `trace`, then reveal the `root` card.
 3. Graph via `GET /graph?session_id=` → root red, trace amber.
 4. **Repair** → `POST /repair` → 3 questions → `POST /attempts` each.
-5. `POST /reverify` → **85.2% → 24.5%**, re-colour the graph from `analysis`.
+5. `POST /reverify` → **86.4% → 23.3%**, re-colour the graph from `analysis`.
 
 Demo student's correct repair answers: `4x + 20`, `-3x - 6`, `10x - 5`.
 

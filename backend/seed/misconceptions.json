@@ -1,10 +1,68 @@
 [
-  {"id": "partial_distribution", "concept_id": "distributive", "name": "Distributes to the first term only", "description": "Multiplies the factor outside the brackets by the first term but not the others, e.g. 3(x + 2) → 3x + 2."},
-  {"id": "negative_distribution", "concept_id": "distributive", "name": "Sign error distributing a negative", "description": "Forgets that a negative factor flips the sign of every term, e.g. -2(x - 3) → -2x - 6."},
-  {"id": "fraction_add_across", "concept_id": "fractions", "name": "Adds numerators and denominators", "description": "Adds fractions by adding tops and bottoms, e.g. 1/2 + 1/3 → 2/5."},
-  {"id": "inverse_sign", "concept_id": "equality", "name": "Moves a term without changing its sign", "description": "Moves a term across the equals sign without applying the inverse operation, e.g. x + 5 = 12 → x = 17."},
-  {"id": "unlike_terms", "concept_id": "like_terms", "name": "Combines unlike terms", "description": "Adds terms with different variable parts, e.g. 4x + 3 + 2x → 9x."},
-  {"id": "exponent_multiply", "concept_id": "exponents", "name": "Multiplies exponents when multiplying powers", "description": "Uses x^a · x^b = x^(ab) instead of x^(a+b)."},
-  {"id": "left_to_right", "concept_id": "order_ops", "name": "Works strictly left to right", "description": "Ignores operator precedence, e.g. 2 + 3 × 4 → 20."},
-  {"id": "freshman_square", "concept_id": "expanding", "name": "Squares each term of a sum", "description": "Writes (a + b)² as a² + b², missing the 2ab cross term."}
+  {
+    "id": "partial_distribution",
+    "concept_id": "distributive",
+    "name": "Distributes to the first term only",
+    "description": "Multiplies the factor outside the brackets by the first term but not the others, e.g. 3(x + 2) → 3x + 2."
+  },
+  {
+    "id": "negative_distribution",
+    "concept_id": "distributive",
+    "name": "Sign error distributing a negative",
+    "description": "Forgets that a negative factor flips the sign of every term, e.g. -2(x - 3) → -2x - 6."
+  },
+  {
+    "id": "fraction_add_across",
+    "concept_id": "fractions",
+    "name": "Adds numerators and denominators",
+    "description": "Adds fractions by adding tops and bottoms, e.g. 1/2 + 1/3 → 2/5."
+  },
+  {
+    "id": "inverse_sign",
+    "concept_id": "equality",
+    "name": "Moves a term without changing its sign",
+    "description": "Moves a term across the equals sign without applying the inverse operation, e.g. x + 5 = 12 → x = 17."
+  },
+  {
+    "id": "unlike_terms",
+    "concept_id": "like_terms",
+    "name": "Combines unlike terms",
+    "description": "Adds terms with different variable parts, e.g. 4x + 3 + 2x → 9x."
+  },
+  {
+    "id": "exponent_multiply",
+    "concept_id": "exponents",
+    "name": "Multiplies exponents when multiplying powers",
+    "description": "Uses x^a · x^b = x^(ab) instead of x^(a+b)."
+  },
+  {
+    "id": "left_to_right",
+    "concept_id": "order_ops",
+    "name": "Works strictly left to right",
+    "description": "Ignores operator precedence, e.g. 2 + 3 × 4 → 20."
+  },
+  {
+    "id": "freshman_square",
+    "concept_id": "expanding",
+    "name": "Squares each term of a sum",
+    "description": "Writes (a + b)² as a² + b², missing the 2ab cross term."
+  },
+  {
+    "id": "sqrt_of_sum",
+    "concept_id": "squares",
+    "name": "Splits a square root over addition",
+    "description": "Writes √(a + b) as √a + √b, e.g. √(9 + 16) → 3 + 4 = 7."
+  },
+  {
+    "id": "percent_wrong_base",
+    "concept_id": "percent",
+    "name": "Uses the new value as the base",
+    "description": "Divides the change by the final value instead of the original, e.g. ₹500 → ₹600 gives 100/600 ≈ 16.7%."
+  },
+  {
+    "id": "ap_n_not_n_minus_1",
+    "concept_id": "ap",
+    "name": "Uses a + nd for the nth term",
+    "description": "Forgets the (n − 1) in aₙ = a + (n − 1)d, so every term is one step too far."
+  }
 ]

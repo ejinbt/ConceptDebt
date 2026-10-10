@@ -1,89 +1,970 @@
 {
-  "diagnostic": [
-    {"id": "d01", "concept_id": "fractions", "kind": "number", "prompt": "Work out 1/2 + 1/3", "answer": "5/6",
-     "distractors": [{"answer": "2/5", "misconception_id": "fraction_add_across"}]},
-    {"id": "d02", "concept_id": "order_ops", "kind": "number", "prompt": "Work out 2 + 3 × 4", "answer": "14",
-     "distractors": [{"answer": "20", "misconception_id": "left_to_right"}]},
-    {"id": "d03", "concept_id": "negatives", "kind": "number", "prompt": "Work out -3 - 5", "answer": "-8",
-     "distractors": []},
-    {"id": "d04", "concept_id": "exponents", "kind": "expression", "prompt": "Simplify x^2 · x^3", "answer": "x^5",
-     "distractors": [{"answer": "x^6", "misconception_id": "exponent_multiply"}]},
-    {"id": "d05", "concept_id": "distributive", "kind": "expression", "prompt": "Expand 3(x + 2)", "answer": "3x + 6",
-     "distractors": [{"answer": "3x + 2", "misconception_id": "partial_distribution"}]},
-    {"id": "d06", "concept_id": "distributive", "kind": "expression", "prompt": "Expand -2(x - 3)", "answer": "-2x + 6",
-     "distractors": [{"answer": "-2x - 6", "misconception_id": "negative_distribution"},
-                     {"answer": "-2x - 3", "misconception_id": "partial_distribution"}]},
-    {"id": "d07", "concept_id": "like_terms", "kind": "expression", "prompt": "Simplify 4x + 3 + 2x", "answer": "6x + 3",
-     "distractors": [{"answer": "9x", "misconception_id": "unlike_terms"}]},
-    {"id": "d08", "concept_id": "alg_manip", "kind": "expression", "prompt": "Simplify 2(x + 4) - 3x", "answer": "-x + 8",
-     "distractors": [{"answer": "-x + 4", "misconception_id": "partial_distribution"},
-                     {"answer": "5x + 8", "misconception_id": "negative_distribution"}]},
-    {"id": "d09", "concept_id": "equality", "kind": "number", "prompt": "Solve x + 5 = 12. What is x?", "answer": "7",
-     "distractors": [{"answer": "17", "misconception_id": "inverse_sign"}]},
-    {"id": "d10", "concept_id": "linear_eq", "kind": "number", "prompt": "Solve 3(x - 2) = 9. What is x?", "answer": "5",
-     "distractors": [{"answer": "11/3", "misconception_id": "partial_distribution"},
-                     {"answer": "1", "misconception_id": "negative_distribution"}]},
-    {"id": "d11", "concept_id": "factoring", "kind": "factored", "prompt": "Factorise 6x + 9 completely", "answer": "3(2x + 3)",
-     "distractors": [{"answer": "3(2x + 9)", "misconception_id": "partial_distribution"}]},
-    {"id": "d12", "concept_id": "expanding", "kind": "expression", "prompt": "Expand (x + 3)^2", "answer": "x^2 + 6x + 9",
-     "distractors": [{"answer": "x^2 + 9", "misconception_id": "freshman_square"},
-                     {"answer": "x^2 + 3x + 9", "misconception_id": "partial_distribution"}]},
-    {"id": "d13", "concept_id": "quadratics", "kind": "number", "prompt": "Solve 2(x^2 - 1) = 6 for x > 0. What is x?", "answer": "2",
-     "distractors": [{"answer": "sqrt(7/2)", "misconception_id": "partial_distribution"}]}
-  ],
-  "repair": [
-    {"id": "r-dist-1", "concept_id": "distributive", "kind": "expression", "prompt": "Expand 4(x + 5)", "answer": "4x + 20",
-     "distractors": [{"answer": "4x + 5", "misconception_id": "partial_distribution"}]},
-    {"id": "r-dist-2", "concept_id": "distributive", "kind": "expression", "prompt": "Expand -3(x + 2)", "answer": "-3x - 6",
-     "distractors": [{"answer": "-3x + 6", "misconception_id": "negative_distribution"},
-                     {"answer": "-3x + 2", "misconception_id": "partial_distribution"}]},
-    {"id": "r-dist-3", "concept_id": "distributive", "kind": "expression", "prompt": "Expand 5(2x - 1)", "answer": "10x - 5",
-     "distractors": [{"answer": "10x - 1", "misconception_id": "partial_distribution"}]},
-    {"id": "r-dist-4", "concept_id": "distributive", "kind": "expression", "prompt": "Expand -(x - 7)", "answer": "-x + 7",
-     "distractors": [{"answer": "-x - 7", "misconception_id": "negative_distribution"}]},
-    {"id": "r-dist-5", "concept_id": "distributive", "kind": "expression", "prompt": "Expand 2(3x + y - 4)", "answer": "6x + 2y - 8",
-     "distractors": [{"answer": "6x + y - 4", "misconception_id": "partial_distribution"}]},
-
-    {"id": "r-frac-1", "concept_id": "fractions", "kind": "number", "prompt": "Work out 1/4 + 2/3", "answer": "11/12",
-     "distractors": [{"answer": "3/7", "misconception_id": "fraction_add_across"}]},
-    {"id": "r-frac-2", "concept_id": "fractions", "kind": "number", "prompt": "Work out 3/5 - 1/2", "answer": "1/10",
-     "distractors": [{"answer": "2/3", "misconception_id": "fraction_add_across"}]},
-    {"id": "r-frac-3", "concept_id": "fractions", "kind": "number", "prompt": "Work out 2/3 + 1/6", "answer": "5/6",
-     "distractors": [{"answer": "3/9", "misconception_id": "fraction_add_across"}]},
-
-    {"id": "r-eq-1", "concept_id": "equality", "kind": "number", "prompt": "Solve x - 4 = 10. What is x?", "answer": "14",
-     "distractors": [{"answer": "6", "misconception_id": "inverse_sign"}]},
-    {"id": "r-eq-2", "concept_id": "equality", "kind": "number", "prompt": "Solve x + 9 = 2. What is x?", "answer": "-7",
-     "distractors": [{"answer": "11", "misconception_id": "inverse_sign"}]},
-    {"id": "r-eq-3", "concept_id": "equality", "kind": "number", "prompt": "Solve 5 + x = 13. What is x?", "answer": "8",
-     "distractors": [{"answer": "18", "misconception_id": "inverse_sign"}]},
-
-    {"id": "r-like-1", "concept_id": "like_terms", "kind": "expression", "prompt": "Simplify 5y + 2 - 3y", "answer": "2y + 2",
-     "distractors": [{"answer": "4y", "misconception_id": "unlike_terms"}]},
-    {"id": "r-like-2", "concept_id": "like_terms", "kind": "expression", "prompt": "Simplify 3a + 4b + a", "answer": "4a + 4b",
-     "distractors": [{"answer": "8ab", "misconception_id": "unlike_terms"}]},
-    {"id": "r-like-3", "concept_id": "like_terms", "kind": "expression", "prompt": "Simplify x + x + 7", "answer": "2x + 7",
-     "distractors": [{"answer": "9x", "misconception_id": "unlike_terms"}]},
-
-    {"id": "r-exp-1", "concept_id": "exponents", "kind": "expression", "prompt": "Simplify a^4 · a^2", "answer": "a^6",
-     "distractors": [{"answer": "a^8", "misconception_id": "exponent_multiply"}]},
-    {"id": "r-exp-2", "concept_id": "exponents", "kind": "expression", "prompt": "Simplify y · y^5", "answer": "y^6",
-     "distractors": [{"answer": "y^5", "misconception_id": "exponent_multiply"}]},
-    {"id": "r-exp-3", "concept_id": "exponents", "kind": "expression", "prompt": "Simplify m^3 · m^3", "answer": "m^6",
-     "distractors": [{"answer": "m^9", "misconception_id": "exponent_multiply"}]},
-
-    {"id": "r-ord-1", "concept_id": "order_ops", "kind": "number", "prompt": "Work out 10 - 2 × 3", "answer": "4",
-     "distractors": [{"answer": "24", "misconception_id": "left_to_right"}]},
-    {"id": "r-ord-2", "concept_id": "order_ops", "kind": "number", "prompt": "Work out 8 + 12 ÷ 4", "answer": "11",
-     "distractors": [{"answer": "5", "misconception_id": "left_to_right"}]},
-    {"id": "r-ord-3", "concept_id": "order_ops", "kind": "number", "prompt": "Work out 3 + 4^2", "answer": "19",
-     "distractors": [{"answer": "49", "misconception_id": "left_to_right"}]},
-
-    {"id": "r-expd-1", "concept_id": "expanding", "kind": "expression", "prompt": "Expand (x + 1)^2", "answer": "x^2 + 2x + 1",
-     "distractors": [{"answer": "x^2 + 1", "misconception_id": "freshman_square"}]},
-    {"id": "r-expd-2", "concept_id": "expanding", "kind": "expression", "prompt": "Expand (x + 2)(x + 5)", "answer": "x^2 + 7x + 10",
-     "distractors": [{"answer": "x^2 + 10", "misconception_id": "freshman_square"}]},
-    {"id": "r-expd-3", "concept_id": "expanding", "kind": "expression", "prompt": "Expand (x - 4)^2", "answer": "x^2 - 8x + 16",
-     "distractors": [{"answer": "x^2 + 16", "misconception_id": "freshman_square"}]}
-  ]
+ "diagnostic": [
+  {
+   "id": "d01",
+   "concept_id": "fractions",
+   "kind": "number",
+   "prompt": "Work out 1/2 + 1/3",
+   "answer": "5/6",
+   "distractors": [
+    {
+     "answer": "2/5",
+     "misconception_id": "fraction_add_across"
+    }
+   ],
+   "grade": 10
+  },
+  {
+   "id": "d02",
+   "concept_id": "order_ops",
+   "kind": "number",
+   "prompt": "Work out 2 + 3 × 4",
+   "answer": "14",
+   "distractors": [
+    {
+     "answer": "20",
+     "misconception_id": "left_to_right"
+    }
+   ],
+   "grade": 10
+  },
+  {
+   "id": "d03",
+   "concept_id": "negatives",
+   "kind": "number",
+   "prompt": "Work out -3 - 5",
+   "answer": "-8",
+   "distractors": [],
+   "grade": 10
+  },
+  {
+   "id": "d04",
+   "concept_id": "exponents",
+   "kind": "expression",
+   "prompt": "Simplify x^2 · x^3",
+   "answer": "x^5",
+   "distractors": [
+    {
+     "answer": "x^6",
+     "misconception_id": "exponent_multiply"
+    }
+   ],
+   "grade": 10
+  },
+  {
+   "id": "d05",
+   "concept_id": "distributive",
+   "kind": "expression",
+   "prompt": "Expand 3(x + 2)",
+   "answer": "3x + 6",
+   "distractors": [
+    {
+     "answer": "3x + 2",
+     "misconception_id": "partial_distribution"
+    }
+   ],
+   "grade": 10
+  },
+  {
+   "id": "d06",
+   "concept_id": "distributive",
+   "kind": "expression",
+   "prompt": "Expand -2(x - 3)",
+   "answer": "-2x + 6",
+   "distractors": [
+    {
+     "answer": "-2x - 6",
+     "misconception_id": "negative_distribution"
+    },
+    {
+     "answer": "-2x - 3",
+     "misconception_id": "partial_distribution"
+    }
+   ],
+   "grade": 10
+  },
+  {
+   "id": "d07",
+   "concept_id": "like_terms",
+   "kind": "expression",
+   "prompt": "Simplify 4x + 3 + 2x",
+   "answer": "6x + 3",
+   "distractors": [
+    {
+     "answer": "9x",
+     "misconception_id": "unlike_terms"
+    }
+   ],
+   "grade": 10
+  },
+  {
+   "id": "d08",
+   "concept_id": "alg_manip",
+   "kind": "expression",
+   "prompt": "Simplify 2(x + 4) - 3x",
+   "answer": "-x + 8",
+   "distractors": [
+    {
+     "answer": "-x + 4",
+     "misconception_id": "partial_distribution"
+    },
+    {
+     "answer": "5x + 8",
+     "misconception_id": "negative_distribution"
+    }
+   ],
+   "grade": 10
+  },
+  {
+   "id": "d09",
+   "concept_id": "equality",
+   "kind": "number",
+   "prompt": "Solve x + 5 = 12. What is x?",
+   "answer": "7",
+   "distractors": [
+    {
+     "answer": "17",
+     "misconception_id": "inverse_sign"
+    }
+   ],
+   "grade": 10
+  },
+  {
+   "id": "d10",
+   "concept_id": "linear_eq",
+   "kind": "number",
+   "prompt": "Solve 3(x - 2) = 9. What is x?",
+   "answer": "5",
+   "distractors": [
+    {
+     "answer": "11/3",
+     "misconception_id": "partial_distribution"
+    },
+    {
+     "answer": "1",
+     "misconception_id": "negative_distribution"
+    }
+   ],
+   "grade": 10
+  },
+  {
+   "id": "d11",
+   "concept_id": "factoring",
+   "kind": "factored",
+   "prompt": "Factorise 6x + 9 completely",
+   "answer": "3(2x + 3)",
+   "distractors": [
+    {
+     "answer": "3(2x + 9)",
+     "misconception_id": "partial_distribution"
+    }
+   ],
+   "grade": 10
+  },
+  {
+   "id": "d12",
+   "concept_id": "expanding",
+   "kind": "expression",
+   "prompt": "Expand (x + 3)^2",
+   "answer": "x^2 + 6x + 9",
+   "distractors": [
+    {
+     "answer": "x^2 + 9",
+     "misconception_id": "freshman_square"
+    },
+    {
+     "answer": "x^2 + 3x + 9",
+     "misconception_id": "partial_distribution"
+    }
+   ],
+   "grade": 10
+  },
+  {
+   "id": "d13",
+   "concept_id": "quadratics",
+   "kind": "number",
+   "prompt": "Solve 2(x^2 - 1) = 6 for x > 0. What is x?",
+   "answer": "2",
+   "distractors": [
+    {
+     "answer": "sqrt(7/2)",
+     "misconception_id": "partial_distribution"
+    }
+   ],
+   "grade": 10
+  },
+  {
+   "id": "d14",
+   "grade": 10,
+   "concept_id": "ap",
+   "kind": "number",
+   "prompt": "Find the 10th term of the AP 3, 7, 11, 15, …",
+   "answer": "39",
+   "distractors": [
+    {
+     "answer": "43",
+     "misconception_id": "ap_n_not_n_minus_1"
+    }
+   ]
+  },
+  {
+   "id": "d15",
+   "grade": 10,
+   "concept_id": "simultaneous",
+   "kind": "number",
+   "prompt": "Solve x + y = 10 and x − y = 2. What is x?",
+   "answer": "6",
+   "distractors": []
+  },
+  {
+   "id": "c9-01",
+   "grade": 9,
+   "concept_id": "fractions",
+   "kind": "number",
+   "prompt": "Work out 3/4 − 1/3",
+   "answer": "5/12",
+   "distractors": [
+    {
+     "answer": "2",
+     "misconception_id": "fraction_add_across"
+    }
+   ]
+  },
+  {
+   "id": "c9-02",
+   "grade": 9,
+   "concept_id": "negatives",
+   "kind": "number",
+   "prompt": "Work out −7 + 3 × (−2)",
+   "answer": "-13",
+   "distractors": [
+    {
+     "answer": "8",
+     "misconception_id": "left_to_right"
+    }
+   ]
+  },
+  {
+   "id": "c9-03",
+   "grade": 9,
+   "concept_id": "exponents",
+   "kind": "expression",
+   "prompt": "Simplify x^3 · x^4",
+   "answer": "x^7",
+   "distractors": [
+    {
+     "answer": "x^12",
+     "misconception_id": "exponent_multiply"
+    }
+   ]
+  },
+  {
+   "id": "c9-04",
+   "grade": 9,
+   "concept_id": "distributive",
+   "kind": "expression",
+   "prompt": "Expand 4(2x − 3)",
+   "answer": "8x - 12",
+   "distractors": [
+    {
+     "answer": "8x - 3",
+     "misconception_id": "partial_distribution"
+    }
+   ]
+  },
+  {
+   "id": "c9-05",
+   "grade": 9,
+   "concept_id": "distributive",
+   "kind": "expression",
+   "prompt": "Expand −3(2 − x)",
+   "answer": "3x - 6",
+   "distractors": [
+    {
+     "answer": "-6 - 3x",
+     "misconception_id": "negative_distribution"
+    },
+    {
+     "answer": "-6 - x",
+     "misconception_id": "partial_distribution"
+    }
+   ]
+  },
+  {
+   "id": "c9-06",
+   "grade": 9,
+   "concept_id": "like_terms",
+   "kind": "expression",
+   "prompt": "Simplify 5a + 3 − 2a + 4",
+   "answer": "3a + 7",
+   "distractors": [
+    {
+     "answer": "10a",
+     "misconception_id": "unlike_terms"
+    }
+   ]
+  },
+  {
+   "id": "c9-07",
+   "grade": 9,
+   "concept_id": "linear_eq",
+   "kind": "number",
+   "prompt": "Solve 2(x + 3) = 14. What is x?",
+   "answer": "4",
+   "distractors": [
+    {
+     "answer": "11/2",
+     "misconception_id": "partial_distribution"
+    }
+   ]
+  },
+  {
+   "id": "c9-08",
+   "grade": 9,
+   "concept_id": "expanding",
+   "kind": "expression",
+   "prompt": "Expand (x − 2)^2",
+   "answer": "x^2 - 4x + 4",
+   "distractors": [
+    {
+     "answer": "x^2 + 4",
+     "misconception_id": "freshman_square"
+    },
+    {
+     "answer": "x^2 - 4",
+     "misconception_id": "freshman_square"
+    }
+   ]
+  },
+  {
+   "id": "c9-09",
+   "grade": 9,
+   "concept_id": "factoring",
+   "kind": "factored",
+   "prompt": "Factorise x^2 + 5x completely",
+   "answer": "x(x + 5)",
+   "distractors": []
+  },
+  {
+   "id": "c9-10",
+   "grade": 9,
+   "concept_id": "polynomials",
+   "kind": "number",
+   "prompt": "If p(x) = x^2 − 3x + 5, find p(2).",
+   "answer": "3",
+   "distractors": []
+  },
+  {
+   "id": "c9-11",
+   "grade": 9,
+   "concept_id": "squares",
+   "kind": "number",
+   "prompt": "Work out √(9 + 16)",
+   "answer": "5",
+   "distractors": [
+    {
+     "answer": "7",
+     "misconception_id": "sqrt_of_sum"
+    }
+   ]
+  },
+  {
+   "id": "c9-12",
+   "grade": 9,
+   "concept_id": "linear_graphs",
+   "kind": "number",
+   "prompt": "x = 2 is part of a solution of 2x + 3y = 13. What is y?",
+   "answer": "3",
+   "distractors": []
+  },
+  {
+   "id": "c8-01",
+   "grade": 8,
+   "concept_id": "fractions",
+   "kind": "number",
+   "prompt": "Work out 2/5 + 1/4",
+   "answer": "13/20",
+   "distractors": [
+    {
+     "answer": "3/9",
+     "misconception_id": "fraction_add_across"
+    }
+   ]
+  },
+  {
+   "id": "c8-02",
+   "grade": 8,
+   "concept_id": "order_ops",
+   "kind": "number",
+   "prompt": "Work out 18 − 6 ÷ 3",
+   "answer": "16",
+   "distractors": [
+    {
+     "answer": "4",
+     "misconception_id": "left_to_right"
+    }
+   ]
+  },
+  {
+   "id": "c8-03",
+   "grade": 8,
+   "concept_id": "negatives",
+   "kind": "number",
+   "prompt": "Work out (−4) × (−3) − 5",
+   "answer": "7",
+   "distractors": []
+  },
+  {
+   "id": "c8-04",
+   "grade": 8,
+   "concept_id": "exponents",
+   "kind": "expression",
+   "prompt": "Simplify a^2 · a^5",
+   "answer": "a^7",
+   "distractors": [
+    {
+     "answer": "a^10",
+     "misconception_id": "exponent_multiply"
+    }
+   ]
+  },
+  {
+   "id": "c8-05",
+   "grade": 8,
+   "concept_id": "distributive",
+   "kind": "expression",
+   "prompt": "Expand 5(x + 3)",
+   "answer": "5x + 15",
+   "distractors": [
+    {
+     "answer": "5x + 3",
+     "misconception_id": "partial_distribution"
+    }
+   ]
+  },
+  {
+   "id": "c8-06",
+   "grade": 8,
+   "concept_id": "distributive",
+   "kind": "expression",
+   "prompt": "Expand −2(3x − 4)",
+   "answer": "-6x + 8",
+   "distractors": [
+    {
+     "answer": "-6x - 8",
+     "misconception_id": "negative_distribution"
+    },
+    {
+     "answer": "-6x - 4",
+     "misconception_id": "partial_distribution"
+    }
+   ]
+  },
+  {
+   "id": "c8-07",
+   "grade": 8,
+   "concept_id": "like_terms",
+   "kind": "expression",
+   "prompt": "Simplify 7y − 2y + 3",
+   "answer": "5y + 3",
+   "distractors": [
+    {
+     "answer": "8y",
+     "misconception_id": "unlike_terms"
+    }
+   ]
+  },
+  {
+   "id": "c8-08",
+   "grade": 8,
+   "concept_id": "equality",
+   "kind": "number",
+   "prompt": "Solve x − 6 = 9. What is x?",
+   "answer": "15",
+   "distractors": [
+    {
+     "answer": "3",
+     "misconception_id": "inverse_sign"
+    }
+   ]
+  },
+  {
+   "id": "c8-09",
+   "grade": 8,
+   "concept_id": "linear_eq",
+   "kind": "number",
+   "prompt": "Solve 3(x + 1) = 15. What is x?",
+   "answer": "4",
+   "distractors": [
+    {
+     "answer": "14/3",
+     "misconception_id": "partial_distribution"
+    }
+   ]
+  },
+  {
+   "id": "c8-10",
+   "grade": 8,
+   "concept_id": "expanding",
+   "kind": "expression",
+   "prompt": "Expand (a + 4)^2",
+   "answer": "a^2 + 8a + 16",
+   "distractors": [
+    {
+     "answer": "a^2 + 16",
+     "misconception_id": "freshman_square"
+    }
+   ]
+  },
+  {
+   "id": "c8-11",
+   "grade": 8,
+   "concept_id": "percent",
+   "kind": "number",
+   "prompt": "A ₹500 bag now costs ₹600. What is the percentage increase?",
+   "answer": "20",
+   "distractors": [
+    {
+     "answer": "16.67",
+     "misconception_id": "percent_wrong_base"
+    }
+   ]
+  },
+  {
+   "id": "c8-12",
+   "grade": 8,
+   "concept_id": "factoring",
+   "kind": "factored",
+   "prompt": "Factorise 4x + 12 completely",
+   "answer": "4(x + 3)",
+   "distractors": [
+    {
+     "answer": "4(x + 12)",
+     "misconception_id": "partial_distribution"
+    }
+   ]
+  }
+ ],
+ "repair": [
+  {
+   "id": "r-dist-1",
+   "concept_id": "distributive",
+   "kind": "expression",
+   "prompt": "Expand 4(x + 5)",
+   "answer": "4x + 20",
+   "distractors": [
+    {
+     "answer": "4x + 5",
+     "misconception_id": "partial_distribution"
+    }
+   ]
+  },
+  {
+   "id": "r-dist-2",
+   "concept_id": "distributive",
+   "kind": "expression",
+   "prompt": "Expand -3(x + 2)",
+   "answer": "-3x - 6",
+   "distractors": [
+    {
+     "answer": "-3x + 6",
+     "misconception_id": "negative_distribution"
+    },
+    {
+     "answer": "-3x + 2",
+     "misconception_id": "partial_distribution"
+    }
+   ]
+  },
+  {
+   "id": "r-dist-3",
+   "concept_id": "distributive",
+   "kind": "expression",
+   "prompt": "Expand 5(2x - 1)",
+   "answer": "10x - 5",
+   "distractors": [
+    {
+     "answer": "10x - 1",
+     "misconception_id": "partial_distribution"
+    }
+   ]
+  },
+  {
+   "id": "r-dist-4",
+   "concept_id": "distributive",
+   "kind": "expression",
+   "prompt": "Expand -(x - 7)",
+   "answer": "-x + 7",
+   "distractors": [
+    {
+     "answer": "-x - 7",
+     "misconception_id": "negative_distribution"
+    }
+   ]
+  },
+  {
+   "id": "r-dist-5",
+   "concept_id": "distributive",
+   "kind": "expression",
+   "prompt": "Expand 2(3x + y - 4)",
+   "answer": "6x + 2y - 8",
+   "distractors": [
+    {
+     "answer": "6x + y - 4",
+     "misconception_id": "partial_distribution"
+    }
+   ]
+  },
+  {
+   "id": "r-frac-1",
+   "concept_id": "fractions",
+   "kind": "number",
+   "prompt": "Work out 1/4 + 2/3",
+   "answer": "11/12",
+   "distractors": [
+    {
+     "answer": "3/7",
+     "misconception_id": "fraction_add_across"
+    }
+   ]
+  },
+  {
+   "id": "r-frac-2",
+   "concept_id": "fractions",
+   "kind": "number",
+   "prompt": "Work out 3/5 - 1/2",
+   "answer": "1/10",
+   "distractors": [
+    {
+     "answer": "2/3",
+     "misconception_id": "fraction_add_across"
+    }
+   ]
+  },
+  {
+   "id": "r-frac-3",
+   "concept_id": "fractions",
+   "kind": "number",
+   "prompt": "Work out 2/3 + 1/6",
+   "answer": "5/6",
+   "distractors": [
+    {
+     "answer": "3/9",
+     "misconception_id": "fraction_add_across"
+    }
+   ]
+  },
+  {
+   "id": "r-eq-1",
+   "concept_id": "equality",
+   "kind": "number",
+   "prompt": "Solve x - 4 = 10. What is x?",
+   "answer": "14",
+   "distractors": [
+    {
+     "answer": "6",
+     "misconception_id": "inverse_sign"
+    }
+   ]
+  },
+  {
+   "id": "r-eq-2",
+   "concept_id": "equality",
+   "kind": "number",
+   "prompt": "Solve x + 9 = 2. What is x?",
+   "answer": "-7",
+   "distractors": [
+    {
+     "answer": "11",
+     "misconception_id": "inverse_sign"
+    }
+   ]
+  },
+  {
+   "id": "r-eq-3",
+   "concept_id": "equality",
+   "kind": "number",
+   "prompt": "Solve 5 + x = 13. What is x?",
+   "answer": "8",
+   "distractors": [
+    {
+     "answer": "18",
+     "misconception_id": "inverse_sign"
+    }
+   ]
+  },
+  {
+   "id": "r-like-1",
+   "concept_id": "like_terms",
+   "kind": "expression",
+   "prompt": "Simplify 5y + 2 - 3y",
+   "answer": "2y + 2",
+   "distractors": [
+    {
+     "answer": "4y",
+     "misconception_id": "unlike_terms"
+    }
+   ]
+  },
+  {
+   "id": "r-like-2",
+   "concept_id": "like_terms",
+   "kind": "expression",
+   "prompt": "Simplify 3a + 4b + a",
+   "answer": "4a + 4b",
+   "distractors": [
+    {
+     "answer": "8ab",
+     "misconception_id": "unlike_terms"
+    }
+   ]
+  },
+  {
+   "id": "r-like-3",
+   "concept_id": "like_terms",
+   "kind": "expression",
+   "prompt": "Simplify x + x + 7",
+   "answer": "2x + 7",
+   "distractors": [
+    {
+     "answer": "9x",
+     "misconception_id": "unlike_terms"
+    }
+   ]
+  },
+  {
+   "id": "r-exp-1",
+   "concept_id": "exponents",
+   "kind": "expression",
+   "prompt": "Simplify a^4 · a^2",
+   "answer": "a^6",
+   "distractors": [
+    {
+     "answer": "a^8",
+     "misconception_id": "exponent_multiply"
+    }
+   ]
+  },
+  {
+   "id": "r-exp-2",
+   "concept_id": "exponents",
+   "kind": "expression",
+   "prompt": "Simplify y · y^5",
+   "answer": "y^6",
+   "distractors": [
+    {
+     "answer": "y^5",
+     "misconception_id": "exponent_multiply"
+    }
+   ]
+  },
+  {
+   "id": "r-exp-3",
+   "concept_id": "exponents",
+   "kind": "expression",
+   "prompt": "Simplify m^3 · m^3",
+   "answer": "m^6",
+   "distractors": [
+    {
+     "answer": "m^9",
+     "misconception_id": "exponent_multiply"
+    }
+   ]
+  },
+  {
+   "id": "r-ord-1",
+   "concept_id": "order_ops",
+   "kind": "number",
+   "prompt": "Work out 10 - 2 × 3",
+   "answer": "4",
+   "distractors": [
+    {
+     "answer": "24",
+     "misconception_id": "left_to_right"
+    }
+   ]
+  },
+  {
+   "id": "r-ord-2",
+   "concept_id": "order_ops",
+   "kind": "number",
+   "prompt": "Work out 8 + 12 ÷ 4",
+   "answer": "11",
+   "distractors": [
+    {
+     "answer": "5",
+     "misconception_id": "left_to_right"
+    }
+   ]
+  },
+  {
+   "id": "r-ord-3",
+   "concept_id": "order_ops",
+   "kind": "number",
+   "prompt": "Work out 3 + 4^2",
+   "answer": "19",
+   "distractors": [
+    {
+     "answer": "49",
+     "misconception_id": "left_to_right"
+    }
+   ]
+  },
+  {
+   "id": "r-expd-1",
+   "concept_id": "expanding",
+   "kind": "expression",
+   "prompt": "Expand (x + 1)^2",
+   "answer": "x^2 + 2x + 1",
+   "distractors": [
+    {
+     "answer": "x^2 + 1",
+     "misconception_id": "freshman_square"
+    }
+   ]
+  },
+  {
+   "id": "r-expd-2",
+   "concept_id": "expanding",
+   "kind": "expression",
+   "prompt": "Expand (x + 2)(x + 5)",
+   "answer": "x^2 + 7x + 10",
+   "distractors": [
+    {
+     "answer": "x^2 + 10",
+     "misconception_id": "freshman_square"
+    }
+   ]
+  },
+  {
+   "id": "r-expd-3",
+   "concept_id": "expanding",
+   "kind": "expression",
+   "prompt": "Expand (x - 4)^2",
+   "answer": "x^2 - 8x + 16",
+   "distractors": [
+    {
+     "answer": "x^2 + 16",
+     "misconception_id": "freshman_square"
+    }
+   ]
+  },
+  {
+   "id": "r-pct-1",
+   "concept_id": "percent",
+   "kind": "number",
+   "prompt": "A ₹200 ticket now costs ₹250. What is the percentage increase?",
+   "answer": "25",
+   "distractors": [
+    {
+     "answer": "20",
+     "misconception_id": "percent_wrong_base"
+    }
+   ]
+  },
+  {
+   "id": "r-pct-2",
+   "concept_id": "percent",
+   "kind": "number",
+   "prompt": "A ₹50 snack now costs ₹60. What is the percentage increase?",
+   "answer": "20",
+   "distractors": [
+    {
+     "answer": "16.67",
+     "misconception_id": "percent_wrong_base"
+    }
+   ]
+  },
+  {
+   "id": "r-pct-3",
+   "concept_id": "percent",
+   "kind": "number",
+   "prompt": "Marks go up from 80 to 100. What is the percentage increase?",
+   "answer": "25",
+   "distractors": [
+    {
+     "answer": "20",
+     "misconception_id": "percent_wrong_base"
+    }
+   ]
+  },
+  {
+   "id": "r-ap-1",
+   "concept_id": "ap",
+   "kind": "number",
+   "prompt": "Find the 8th term of the AP 2, 5, 8, …",
+   "answer": "23",
+   "distractors": [
+    {
+     "answer": "26",
+     "misconception_id": "ap_n_not_n_minus_1"
+    }
+   ]
+  },
+  {
+   "id": "r-ap-2",
+   "concept_id": "ap",
+   "kind": "number",
+   "prompt": "Find the 6th term of the AP 10, 15, 20, …",
+   "answer": "35",
+   "distractors": [
+    {
+     "answer": "40",
+     "misconception_id": "ap_n_not_n_minus_1"
+    }
+   ]
+  },
+  {
+   "id": "r-ap-3",
+   "concept_id": "ap",
+   "kind": "number",
+   "prompt": "Find the 12th term of the AP 1, 3, 5, …",
+   "answer": "23",
+   "distractors": [
+    {
+     "answer": "25",
+     "misconception_id": "ap_n_not_n_minus_1"
+    }
+   ]
+  },
+  {
+   "id": "r-sqrt-1",
+   "concept_id": "squares",
+   "kind": "number",
+   "prompt": "Work out √(36 + 64)",
+   "answer": "10",
+   "distractors": [
+    {
+     "answer": "14",
+     "misconception_id": "sqrt_of_sum"
+    }
+   ]
+  },
+  {
+   "id": "r-sqrt-2",
+   "concept_id": "squares",
+   "kind": "number",
+   "prompt": "Work out √(25 + 144)",
+   "answer": "13",
+   "distractors": [
+    {
+     "answer": "17",
+     "misconception_id": "sqrt_of_sum"
+    }
+   ]
+  },
+  {
+   "id": "r-sqrt-3",
+   "concept_id": "squares",
+   "kind": "number",
+   "prompt": "Work out √(64 + 225)",
+   "answer": "17",
+   "distractors": [
+    {
+     "answer": "23",
+     "misconception_id": "sqrt_of_sum"
+    }
+   ]
+  }
+ ]
 }

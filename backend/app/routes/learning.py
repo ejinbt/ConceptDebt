@@ -25,6 +25,7 @@ def session_out(db: Session, s: StudySession) -> SessionOut:
     return SessionOut(
         session_id=s.id,
         label=s.label,
+        grade=s.grade,
         phase=s.phase,
         root_concept_id=s.root_concept_id,
         answered=len(services.session_attempts(db, s.id)),
@@ -34,7 +35,7 @@ def session_out(db: Session, s: StudySession) -> SessionOut:
 
 @router.post("/sessions", response_model=SessionOut, status_code=201)
 def create_session(body: SessionCreate | None = None, db: Session = Depends(get_db)):
-    s = StudySession(label=body.label if body else None)
+    s = StudySession(label=body.label if body else None, grade=body.grade if body else services.DEFAULT_GRADE)
     db.add(s)
     db.commit()
     db.refresh(s)
@@ -52,10 +53,10 @@ def submit_attempt(body: AttemptIn, db: Session = Depends(get_db)):
     question = db.get(Question, body.question_id)
     if question is None:
         raise HTTPException(404, f"question {body.question_id} not found")
-    if not body.answer.strip():
+    if not body.not_learned and not body.answer.strip():
         raise HTTPException(422, "answer is empty")
 
-    a = services.record_attempt(db, session, question, body.answer, body.working, body.time_ms)
+    a = services.record_attempt(db, session, question, body.answer, body.working, body.time_ms, body.not_learned)
     misconception = db.get(Misconception, a.misconception_id) if a.misconception_id else None
     return AttemptOut(
         attempt_id=a.id,
@@ -98,9 +99,12 @@ def list_attempts(session_id: str, db: Session = Depends(get_db)):
 @router.get("/sessions/{session_id}/score", response_model=ScoreOut)
 def plain_score(session_id: str, db: Session = Depends(get_db)):
     """The 'symptom' view: a normal percentage score on the diagnostic."""
-    services.get_session(db, session_id)
-    latest = {a.question_id: a for a in services.session_attempts(db, session_id) if a.mode == "diagnostic" and a.source != "invalid"}
-    total = len(db.exec(select(Question).where(Question.is_repair == False)).all())  # noqa: E712
+    session = services.get_session(db, session_id)
+    latest = {
+        a.question_id: a for a in services.session_attempts(db, session_id)
+        if a.mode == "diagnostic" and a.source not in services.IGNORED_SOURCES
+    }
+    total = len(services.diagnostic_questions(db, session.grade))
     correct = sum(a.correct for a in latest.values())
     return ScoreOut(
         session_id=session_id,
@@ -146,7 +150,7 @@ def start_repair(session_id: str, count: int = Query(3, ge=1, le=5), db: Session
     return RepairOut(
         session_id=session_id,
         root={"concept_id": concept.id, "name": concept.name, "debt": round(debts[concept.id].debt, 1)},
-        questions=[question_out(q, concept.name) for q in questions],
+        questions=[question_out(q, concept) for q in questions],
     )
 
 
@@ -172,7 +176,7 @@ def reverify(session_id: str, db: Session = Depends(get_db)):
         if before.get(cid, 0.0) >= 1 or after.get(cid, 0.0) >= 1
     ]
     changes.sort(key=lambda c: c["change"])
-    repair = [a for a in services.session_attempts(db, session_id) if a.mode == "repair" and a.source != "invalid"]
+    repair = [a for a in services.session_attempts(db, session_id) if a.mode == "repair" and a.source not in services.IGNORED_SOURCES]
     return ReverifyOut(
         session_id=session_id,
         root_concept_id=root_id,

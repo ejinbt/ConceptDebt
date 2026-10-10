@@ -29,9 +29,9 @@ RECENCY = 0.95
 SYMPTOM_SHARE = 0.35
 HOP_CLASSIFIED = 0.25  # propagation per hop when a misconception was identified
 HOP_UNCLASSIFIED = 0.5  # propagation per hop when we only know the answer was wrong
-CREDIT_DIRECT = 1.15
+CREDIT_DIRECT = 1.05
 CREDIT_HOP = 0.3
-K = 4.5
+K = 3.75
 
 
 @dataclass

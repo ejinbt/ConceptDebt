@@ -110,12 +110,19 @@ const SECTIONS = [
     "Set <code>AI_DISABLED=1</code>, restart → everything still works, explanation shows <code>[template]</code>",
   ]],
   ["Demo flow (what judges see)", [
-    "<b>Load demo student</b> → score <b>46%</b> (6 of 13)",
+    "<b>Load demo student</b> → score <b>53%</b> (8 of 15)",
     "<b>Debug learning</b> → root <b>Distributive Property ~85%</b>, 6 mistakes, trace ends on it",
     "Graph: root is red, trace nodes amber",
     "<b>Repair the root</b> → 3 questions on Distributive Property",
     "Answer <code>4x + 20</code>, <code>-3x - 6</code>, <code>10x - 5</code> → each shows ✓",
-    "Result → <b>85.2% → 24.5%</b>, 3/3 correct",
+    "Result → <b>86.4% → 23.3%</b>, 3/3 correct",
+  ]],
+  ["NCERT classes", [
+    "Start page has a <b>Class completed</b> picker: Class 8 / 9 / 10",
+    "Class 8 test only has Class 6–8 questions; each shows its NCERT chapter",
+    "<b>Haven't learned this yet</b> moves on, the number turns blue, and it doesn't change the score or debt",
+    "Debug on a Class 8 session: root is a Class 6–8 concept, advice says \"Revise NCERT Class …\"",
+    "Graph: Class 9–11 concepts are greyed out with 🔒; debt table has no concept above Class 8",
   ]],
   ["Real diagnostic", [
     "<b>Start new diagnostic</b>, answer all 13 correctly → 100%, Debug says no root found",
@@ -140,7 +147,7 @@ const SECTIONS = [
     "<code>POST /api/sessions/{id}/repair</code> before debug → 409",
     "<code>POST /api/sessions/{id}/reverify</code> before debug → 409",
     "<code>POST /api/attempts</code> with unknown <code>question_id</code> → 404, empty <code>answer</code> → 422",
-    "<code>GET /api/graph</code> → 25 nodes, edges go prerequisite → dependent",
+    "<code>GET /api/graph</code> → 26 nodes, edges go prerequisite → dependent",
     "<code>GET /api/teacher/overview</code> after a few debugged sessions → concept totals",
   ]],
   ["Database", [
@@ -150,7 +157,7 @@ const SECTIONS = [
   ]],
 ];
 
-const KEY = "conceptdebt.checklist.v1";
+const KEY = "conceptdebt.checklist.v2";
 let data = {};
 try { data = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { data = {}; }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch {} };

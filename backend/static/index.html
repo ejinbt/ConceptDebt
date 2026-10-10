@@ -12,6 +12,7 @@
     .node.trace { background: #997404; border-color: #ffda6a; color: #fff; }
     .node.failed { background: #6c2a2f; }
     .node.at_risk { background: #4d3f10; }
+    .node.locked { opacity: .35; border-style: dashed; }
     .chain span + span::before { content: " → "; color: var(--bs-secondary-color); }
     #log { max-height: 320px; overflow: auto; font-size: .72rem; white-space: pre-wrap; }
     .bar { height: 1.1rem; }
@@ -34,7 +35,11 @@
       <!-- start -->
       <section id="v-start" class="card"><div class="card-body">
         <h5 class="card-title">Start a diagnostic</h5>
-        <p class="text-secondary small">13 short maths questions. Type answers like <code>3x + 6</code>, <code>x^2</code>, <code>5/6</code>, <code>3(2x + 3)</code>.</p>
+        <p class="text-secondary small">Short NCERT maths questions from your class and earlier ones. Type answers like <code>3x + 6</code>, <code>x^2</code>, <code>5/6</code>, <code>3(2x + 3)</code>, <code>2√3</code>.</p>
+        <div class="input-group mb-3" style="max-width: 320px">
+          <label class="input-group-text" for="grade">Class completed</label>
+          <select id="grade" class="form-select"><option value="10">Class 10</option></select>
+        </div>
         <div id="continue-box" class="alert alert-secondary small d-none">
           Session in progress: <code id="continue-id"></code> (<span id="continue-phase"></span>)
           <button class="btn btn-sm btn-primary ms-2" onclick="continueSession()">Continue</button>
@@ -61,6 +66,7 @@
             <button type="button" class="btn btn-outline-secondary" id="q-prev" onclick="step(-1)">← Previous</button>
             <button class="btn btn-primary" id="q-submit">Submit</button>
             <button type="button" class="btn btn-outline-secondary" id="q-skip" onclick="step(1)">Skip →</button>
+            <button type="button" class="btn btn-outline-info" id="q-notlearned" onclick="notLearned()">Haven't learned this yet</button>
             <button type="button" class="btn btn-outline-warning ms-auto" id="q-finish" onclick="finish()">Finish</button>
           </div>
         </form>
@@ -90,7 +96,7 @@
         </div></div>
         <div class="card mb-3"><div class="card-body">
           <h6>Concept debt</h6>
-          <table class="table table-sm small mb-0"><thead><tr><th>Concept</th><th style="width:40%">Debt</th><th>Mistakes</th><th>Affects</th><th>Status</th></tr></thead><tbody id="debt-rows"></tbody></table>
+          <table class="table table-sm small mb-0"><thead><tr><th>Concept</th><th>Class</th><th style="width:35%">Debt</th><th>Mistakes</th><th>Affects</th><th>Status</th></tr></thead><tbody id="debt-rows"></tbody></table>
         </div></div>
         <div class="card"><div class="card-body">
           <h6>Concept graph <small class="text-secondary">(columns = level, prerequisites on the left)</small></h6>
@@ -164,7 +170,7 @@ async function openSession(session) {
   state.analysis = state.result = null;
   state.answers = {};
   for (const a of await call("GET", `/sessions/${session.session_id}/attempts`)) state.answers[a.question_id] = a;
-  if (!state.diagnostic.length) state.diagnostic = await call("GET", "/diagnostic");
+  state.diagnostic = await call("GET", `/diagnostic?session_id=${session.session_id}`);
   save();
 }
 
@@ -175,7 +181,7 @@ async function refreshSession() {
 
 async function start() {
   state.repair = [];
-  await openSession(await call("POST", "/sessions", {}));
+  await openSession(await call("POST", "/sessions", { grade: Number($("grade").value) }));
   go("test/0");
 }
 
@@ -228,7 +234,7 @@ function renderSteps(active) {
     return `<li class="nav-item"><a class="nav-link ${on ? "active" : ""} ${enabled ? "" : "disabled"}" href="#${route}">${esc(label)}</a></li>`;
   }).join("");
   $("sess").innerHTML = state.session
-    ? `<code>${esc(sid())}</code><br>phase: ${esc(p)} · answered: ${state.session.answered}` : "—";
+    ? `<code>${esc(sid())}</code><br>Class ${state.session.grade} · phase: ${esc(p)} · answered: ${state.session.answered}` : "—";
   $("end-btn").classList.toggle("d-none", !state.session);
 }
 
@@ -275,16 +281,17 @@ function showQuestion(mode, index) {
   const prev = state.answers[q.id];
 
   $("q-label").textContent = `${mode} ${index + 1}/${queue.length}`;
-  $("q-concept").textContent = q.concept_name;
+  $("q-concept").textContent = q.ncert ? `${q.concept_name} · NCERT ${q.ncert}` : q.concept_name;
   $("q-pills").innerHTML = queue.map((x, i) => {
     const a = state.answers[x.id];
-    const cls = !a ? "btn-outline-secondary" : a.source === "invalid" ? "btn-warning" : mode === "repair" ? (a.correct ? "btn-success" : "btn-danger") : "btn-secondary";
+    const cls = !a ? "btn-outline-secondary" : a.source === "invalid" ? "btn-warning" : a.source === "not_learned" ? "btn-info" : mode === "repair" ? (a.correct ? "btn-success" : "btn-danger") : "btn-secondary";
     return `<button type="button" class="btn btn-sm qpill ${cls} ${i === index ? "border border-2 border-light" : ""}" onclick="go('${mode === "repair" ? "repair" : "test"}/${i}')">${i + 1}</button>`;
   }).join("");
   $("q-prompt").textContent = q.prompt;
   $("q-answer").value = prev?.answer ?? "";
   $("q-working").value = prev?.working ?? "";
   $("q-feedback").innerHTML = prev?.source === "invalid" ? `<span class="text-warning">⚠ Your last answer wasn't a maths answer, so it doesn't count yet.</span>`
+    : prev?.source === "not_learned" ? `<span class="text-info">Marked as not learned yet, so it doesn't count. Answer it to replace the mark.</span>`
     : prev && mode === "repair" ? feedback(prev) : prev ? `<span class="text-secondary small">answered, submit again to change it</span>` : "";
   $("q-submit").disabled = false;
   $("q-submit").textContent = prev ? "Update answer" : "Submit";
@@ -337,6 +344,14 @@ async function submitAnswer(e) {
   step(1);
 }
 
+async function notLearned() {
+  const q = queueFor(state.mode)[state.index];
+  const r = await call("POST", "/attempts", { session_id: sid(), question_id: q.id, not_learned: true }).catch(() => null);
+  if (!r) return;
+  state.answers[q.id] = r;
+  step(1);
+}
+
 async function finish() {
   if (state.mode === "repair") return go("result");
   const answered = state.diagnostic.filter((q) => state.answers[q.id]).length;
@@ -350,7 +365,7 @@ async function finish() {
 async function showScore() {
   const s = await call("GET", `/sessions/${sid()}/score`);
   $("score-pct").textContent = `${Math.round(s.percent)}%`;
-  $("score-detail").textContent = `${s.correct} of ${s.answered} correct`;
+  $("score-detail").textContent = `Class ${state.session.grade} · ${s.correct} of ${s.answered} correct`;
   show("score");
 }
 
@@ -375,24 +390,25 @@ async function showDebugger() {
       <strong>Root cause: ${esc(a.root.name)}</strong> — ${a.root.debt}% debt · ${Math.round(a.root.confidence * 100)}% confidence ·
       ${a.root.mistakes} mistakes across ${a.root.affected_topics.length} topics
       <div class="small mt-1">${a.root.misconceptions.map((m) => `${esc(m.name)} ×${m.count}`).join(" · ")}</div>
+      <div class="small mt-1">📖 Revise <b>NCERT ${esc(a.root.ncert)}</b></div>
     </div>` : "";
   $("repair-btn").disabled = !a.root;
   $("repair-btn").textContent = state.repair.length ? "Continue repair →" : "Repair the root →";
   $("expl-summary").textContent = a.explanation.summary;
   $("expl-advice").textContent = `${a.explanation.advice}  [${a.explanation.source}]`;
   $("debt-rows").innerHTML = a.concepts.map((c) => `
-    <tr><td>${esc(c.name)}</td>
+    <tr><td>${esc(c.name)}</td><td>${c.grade}</td>
       <td><div class="progress bar"><div class="progress-bar bg-${c.status === "root" ? "danger" : "warning"}" style="width:${c.debt}%">${c.debt}</div></div></td>
       <td>${c.mistakes}</td><td>${c.affected_topics.length}</td>
       <td><span class="badge text-bg-${badge[c.status]}">${c.status}</span></td></tr>`).join("");
 
   const g = await call("GET", `/graph?session_id=${sid()}`);
   const levels = [...new Set(g.nodes.map((n) => n.level))].sort();
-  $("graph").innerHTML = levels.map((l) => `<div class="col">${g.nodes.filter((n) => n.level === l).map((n) =>
-    `<div class="node ${n.status}" title="${esc(n.description)}">${esc(n.name)}${n.debt >= 1 ? ` <b>${n.debt}%</b>` : ""}</div>`).join("")}</div>`).join("");
+  $("graph").innerHTML = levels.map((l) => `<div class="col"><div class="small text-secondary mb-1">Class ${l + 6}</div>${g.nodes.filter((n) => n.level === l).map((n) =>
+    `<div class="node ${n.status}" title="${esc(n.ncert)}: ${esc(n.description)}">${n.status === "locked" ? "🔒 " : ""}${esc(n.name)}${n.debt >= 1 ? ` <b>${n.debt}%</b>` : ""}</div>`).join("")}</div>`).join("");
   show("debug");
 }
-const badge = { root: "danger", trace: "warning", failed: "secondary", at_risk: "dark", ok: "light" };
+const badge = { root: "danger", trace: "warning", failed: "secondary", at_risk: "dark", ok: "light", locked: "secondary" };
 
 async function startRepair() {
   if (!state.repair.length) {
@@ -430,6 +446,9 @@ async function refreshHealth() {
 window.addEventListener("hashchange", render);
 (async () => {
   refreshHealth();
+  call("GET", "/classes").then((rows) => {
+    $("grade").innerHTML = rows.map((c) => `<option value="${c.grade}" ${c.grade === 10 ? "selected" : ""}>${esc(c.label)} (${c.questions} questions)</option>`).join("");
+  }).catch(() => {});
   const saved = load();
   if (saved.session_id) {
     try {

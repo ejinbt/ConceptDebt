@@ -17,7 +17,9 @@ class Concept(SQLModel, table=True):
     id: str = Field(primary_key=True)
     name: str
     description: str = ""
-    level: int = 0
+    level: int = 0  # graph column (grade - 6)
+    grade: int = 0  # NCERT class where it's taught
+    ncert: str = ""  # e.g. "Class 7 · Algebraic Expressions"
 
 
 class Prerequisite(SQLModel, table=True):
@@ -41,6 +43,7 @@ class Question(SQLModel, table=True):
     prompt: str
     answer: str
     is_repair: bool = False
+    grade: Optional[int] = None  # which class's diagnostic it belongs to (None for repair)
     generated: bool = False  # written by the AI layer at runtime
     # [{"answer": "3x + 2", "misconception_id": "partial_distribution"}, ...]
     distractors: list = Field(default_factory=list, sa_column=Column(JSON))
@@ -51,6 +54,7 @@ class StudySession(SQLModel, table=True):
 
     id: str = Field(default_factory=lambda: uuid.uuid4().hex, primary_key=True)
     label: Optional[str] = None
+    grade: int = 10  # NCERT class the student has completed
     phase: str = "diagnostic"  # diagnostic | debugged | repair | done
     root_concept_id: Optional[str] = Field(default=None, foreign_key="concept.id")
     explanation: Optional[dict] = Field(default=None, sa_column=Column(JSON))
@@ -68,7 +72,7 @@ class Attempt(SQLModel, table=True):
     correct: bool
     misconception_id: Optional[str] = Field(default=None, foreign_key="misconception.id")
     confidence: float = 0.0
-    source: str = "rule"  # rule | ai | unclassified | correct
+    source: str = "rule"  # rule | ai | unclassified | correct | invalid | not_learned
     rationale: Optional[str] = None
     created_at: datetime = Field(default_factory=_now)
 

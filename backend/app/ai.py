@@ -167,7 +167,7 @@ class GeneratedSet(BaseModel):
     questions: list[GeneratedQuestion]
 
 
-def generate_repair_questions(concept: dict, misconceptions: list[dict], count: int) -> Optional[list[dict]]:
+def generate_repair_questions(concept: dict, misconceptions: list[dict], count: int, grade: int = 10) -> Optional[list[dict]]:
     options = "\n".join(f"- {m['id']}: {m['name']}. {m['description']}" for m in misconceptions)
     result = _parse(
         system=(
@@ -176,7 +176,8 @@ def generate_repair_questions(concept: dict, misconceptions: list[dict], count: 
             "For each question, give the wrong answer each listed misconception would produce."
         ),
         prompt=(
-            f"Concept: {concept['name']}. {concept['description']}\n"
+            f"Student: Indian NCERT Class {grade}. Keep to what that class has been taught.\n"
+            f"Concept: {concept['name']} (NCERT {concept.get('ncert', '')}). {concept['description']}\n"
             f"Misconceptions to target:\n{options or '(none listed)'}\n\n"
             f"Write {count} questions, easiest first."
         ),

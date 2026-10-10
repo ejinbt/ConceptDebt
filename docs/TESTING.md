@@ -30,12 +30,19 @@ uvicorn app.main:app --reload
 - [ ] Set `AI_DISABLED=1`, restart → everything still works, explanation shows `[template]`
 
 ## 3. Demo flow (the one judges see)
-- [ ] **Load demo student** → score **46%** (6 of 13)
+- [ ] **Load demo student** → score **53%** (8 of 15)
 - [ ] **Debug learning** → root **Distributive Property ~85%**, 6 mistakes, trace ends on it
 - [ ] Graph: root is red, trace nodes amber
 - [ ] **Repair the root** → 3 questions on Distributive Property
 - [ ] Answer `4x + 20`, `-3x - 6`, `10x - 5` → each shows ✓
-- [ ] Result → **85.2% → 24.5%**, 3/3 correct
+- [ ] Result → **86.4% → 23.3%**, 3/3 correct
+
+## 3b. NCERT classes
+- [ ] Start page has a **Class completed** picker: Class 8 / 9 / 10
+- [ ] Class 8 test only has Class 6–8 questions; each shows its NCERT chapter
+- [ ] **Haven't learned this yet** moves on, the number turns blue, and it doesn't change the score or debt
+- [ ] Debug on a Class 8 session: root is a Class 6–8 concept, advice says "Revise NCERT Class …"
+- [ ] Graph: Class 9–11 concepts are greyed out with 🔒; debt table has no concept above Class 8
 
 ## 4. Real diagnostic
 - [ ] **Start new diagnostic**, answer all 13 correctly → 100%, Debug says no root found
@@ -62,7 +69,7 @@ uvicorn app.main:app --reload
 - [ ] `POST /api/sessions/{id}/repair` before debug → 409
 - [ ] `POST /api/sessions/{id}/reverify` before debug → 409
 - [ ] `POST /api/attempts` with unknown `question_id` → 404, empty `answer` → 422
-- [ ] `GET /api/graph` → 25 nodes, edges go prerequisite → dependent
+- [ ] `GET /api/graph` → 26 nodes, edges go prerequisite → dependent
 - [ ] `GET /api/teacher/overview` after a few debugged sessions → concept totals
 
 ## 7. Database

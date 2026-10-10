@@ -6,16 +6,19 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 Phase = Literal["diagnostic", "debugged", "repair", "done"]
-Status = Literal["root", "trace", "failed", "at_risk", "ok"]
+Status = Literal["root", "trace", "failed", "at_risk", "ok", "locked"]
+Grade = Literal[8, 9, 10]
 
 
 class SessionCreate(BaseModel):
     label: Optional[str] = Field(None, max_length=80, description="Optional nickname. Don't send personal data.")
+    grade: Grade = Field(10, description="NCERT class the student has completed (8, 9 or 10)")
 
 
 class SessionOut(BaseModel):
     session_id: str
     label: Optional[str]
+    grade: int
     phase: Phase
     root_concept_id: Optional[str]
     answered: int
@@ -26,6 +29,7 @@ class QuestionOut(BaseModel):
     id: str
     concept_id: str
     concept_name: str
+    ncert: str = Field("", description="NCERT class and chapter the question comes from")
     kind: Literal["number", "expression", "factored"]
     prompt: str
     is_repair: bool
@@ -34,9 +38,10 @@ class QuestionOut(BaseModel):
 class AttemptIn(BaseModel):
     session_id: str
     question_id: str
-    answer: str = Field(..., max_length=200)
+    answer: str = Field("", max_length=200)
     working: Optional[str] = Field(None, max_length=2000, description="Optional working or explanation")
     time_ms: Optional[int] = Field(None, ge=0)
+    not_learned: bool = Field(False, description="Student says this hasn't been taught yet. Answer can be empty; never counts as debt.")
 
 
 class MisconceptionRef(BaseModel):
@@ -54,7 +59,7 @@ class AttemptOut(BaseModel):
     correct_answer: str
     misconception: Optional[MisconceptionRef]
     confidence: float
-    source: Literal["rule", "ai", "unclassified", "correct", "invalid"]
+    source: Literal["rule", "ai", "unclassified", "correct", "invalid", "not_learned"]
     rationale: Optional[str]
 
 
@@ -76,6 +81,8 @@ class ConceptDebtOut(BaseModel):
     concept_id: str
     name: str
     level: int
+    grade: int = Field(description="NCERT class where it's taught")
+    ncert: str = Field(description="e.g. 'Class 7 · Algebraic Expressions'")
     debt: float = Field(description="0-100")
     mistakes: int = Field(description="Wrong answers blamed directly on this concept")
     evidence_count: int = Field(description="Wrong answers that touched this concept at all")
@@ -88,6 +95,8 @@ class ConceptDebtOut(BaseModel):
 class RootOut(BaseModel):
     concept_id: str
     name: str
+    grade: int
+    ncert: str = Field(description="The NCERT chapter to revise")
     debt: float
     confidence: float
     coverage: float = Field(description="Share of failed topics this root explains, 0-1")
@@ -110,8 +119,10 @@ class ExplanationOut(BaseModel):
 
 class AnalysisOut(BaseModel):
     session_id: str
+    grade: int
     phase: Phase
     answered: int
+    not_learned: int = Field(description="Questions marked 'not learned yet' (ignored by scoring)")
     wrong: int
     root: Optional[RootOut]
     trace: list[TraceStep] = Field(description="From the most advanced failed topic down to the root")
@@ -148,6 +159,8 @@ class GraphNode(BaseModel):
     id: str
     name: str
     level: int
+    grade: int
+    ncert: str
     description: str
     debt: float
     status: Status
@@ -164,10 +177,18 @@ class GraphOut(BaseModel):
     edges: list[GraphEdge]
 
 
+class ClassOut(BaseModel):
+    grade: int
+    label: str
+    questions: int
+
+
 class ConceptOut(BaseModel):
     id: str
     name: str
     level: int
+    grade: int
+    ncert: str
     description: str
     prerequisites: list[str]
     misconceptions: list[MisconceptionRef]

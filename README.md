@@ -62,7 +62,7 @@ data resets on every deploy. Supabase is optional (see `DATABASE_URL` below).
 
 | Layer | Where | What |
 |---|---|---|
-| Knowledge | `backend/seed/*.json` | 25 concepts with prerequisites, 8 misconceptions, 13 diagnostic + 23 repair questions |
+| Knowledge | `backend/seed/*.json` | 26 concepts mapped to NCERT Class 6–11 chapters, 11 misconceptions, diagnostics for Class 8 (12), 9 (12) and 10 (15) questions, 32 repair questions |
 | Checking | `app/checker.py` | sympy equivalence (`6 + 3x` = `3x + 6`), known-wrong-answer matching |
 | AI (optional) | `app/ai.py` | Classifies unknown wrong answers from the student's working, writes the explanation, generates repair questions. JSON output is validated; any failure falls back to deterministic logic |
 | Debt engine | `app/engine/scoring.py` | frequency × recency × prerequisite impact × confidence |
@@ -77,9 +77,15 @@ Correct answers pay debt down. `debt% = 100 × (1 − e^(−raw × impact / K))`
 impact grows with the number of concepts that depend on it. All constants sit at
 the top of `scoring.py`.
 
-The demo student (`POST /api/demo/session`) scores 46%, gets diagnosed with
-**Distributive Property at 85.2% debt** (6 mistakes across 5 topics), and drops to
-**24.5%** after three correct repair answers.
+**NCERT classes:** the student picks the class they've completed (8, 9 or 10). The test
+only covers that class and earlier ones, root causes are only traced *downwards* into
+earlier classes, concepts above their class are locked, and "Haven't learned this yet"
+never counts as debt. The seeded content is plain JSON, so editing a question or
+chapter name and redeploying updates it in place (student data is kept).
+
+The demo student (`POST /api/demo/session`, Class 10) scores 53%, gets diagnosed with
+**Distributive Property (NCERT Class 7) at 86.4% debt** (6 mistakes across 5 topics),
+and drops to **23.3%** after three correct repair answers.
 
 ## Layout
 

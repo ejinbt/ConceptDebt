@@ -2,20 +2,21 @@
 
 from collections import Counter
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
 from .. import ai, config, services
 from ..db import get_db
 from ..models import Concept, DebtSnapshot, Misconception, Question, StudySession
-from ..schemas import ConceptOut, GraphOut, HealthOut, QuestionOut, SessionOut, TeacherOut
+from ..schemas import ClassOut, ConceptOut, GraphOut, HealthOut, QuestionOut, SessionOut, TeacherOut
 
 router = APIRouter(prefix="/api", tags=["content"])
 
 
-def question_out(q: Question, concept_name: str) -> QuestionOut:
+def question_out(q: Question, concept: Concept) -> QuestionOut:
     return QuestionOut(
-        id=q.id, concept_id=q.concept_id, concept_name=concept_name, kind=q.kind, prompt=q.prompt, is_repair=q.is_repair
+        id=q.id, concept_id=q.concept_id, concept_name=concept.name, ncert=concept.ncert,
+        kind=q.kind, prompt=q.prompt, is_repair=q.is_repair,
     )
 
 
@@ -29,12 +30,26 @@ def health():
     )
 
 
+@router.get("/classes", response_model=list[ClassOut])
+def classes(db: Session = Depends(get_db)):
+    """The NCERT classes a student can pick, for the class picker."""
+    return [
+        {"grade": g, "label": f"Class {g}", "questions": len(services.diagnostic_questions(db, g))}
+        for g in services.GRADES
+    ]
+
+
 @router.get("/diagnostic", response_model=list[QuestionOut])
-def diagnostic(db: Session = Depends(get_db)):
-    """The diagnostic test, in order. Answers are not included."""
-    names = {c.id: c.name for c in db.exec(select(Concept)).all()}
-    questions = db.exec(select(Question).where(Question.is_repair == False).order_by(Question.id)).all()  # noqa: E712
-    return [question_out(q, names[q.concept_id]) for q in questions]
+def diagnostic(session_id: str | None = None, grade: int | None = None, db: Session = Depends(get_db)):
+    """The diagnostic for a class, in order. Pass session_id (uses the session's class)
+    or grade. Defaults to Class 10. Answers are not included."""
+    if session_id:
+        grade = services.get_session(db, session_id).grade
+    grade = grade or services.DEFAULT_GRADE
+    if grade not in services.GRADES:
+        raise HTTPException(422, f"grade must be one of {list(services.GRADES)}")
+    meta = services.concept_meta(db)
+    return [question_out(q, meta[q.concept_id]) for q in services.diagnostic_questions(db, grade)]
 
 
 @router.get("/concepts", response_model=list[ConceptOut])
@@ -46,7 +61,7 @@ def concepts(db: Session = Depends(get_db)):
     rows = db.exec(select(Concept).order_by(Concept.level, Concept.id)).all()
     return [
         ConceptOut(
-            id=c.id, name=c.name, level=c.level, description=c.description,
+            id=c.id, name=c.name, level=c.level, grade=c.grade, ncert=c.ncert, description=c.description,
             prerequisites=graph.nodes[c.id].requires, misconceptions=by_concept.get(c.id, []),
         )
         for c in rows
@@ -55,20 +70,23 @@ def concepts(db: Session = Depends(get_db)):
 
 @router.get("/graph", response_model=GraphOut)
 def graph(session_id: str | None = None, db: Session = Depends(get_db)):
-    """Nodes and edges for React Flow / D3. Pass session_id to colour nodes by debt."""
+    """Nodes and edges for React Flow / D3. Pass session_id to colour nodes by debt;
+    concepts above the student's class come back as status "locked"."""
     g = services.load_graph(db)
-    descriptions = {c.id: c.description for c in db.exec(select(Concept)).all()}
-    debts, root, failed = {}, None, set()
+    meta = services.concept_meta(db)
+    debts, root, failed, max_grade = {}, None, set(), 12
     if session_id:
-        services.get_session(db, session_id)
+        max_grade = services.get_session(db, session_id).grade
         _, debts, root, _ = services.analyse(db, session_id)
         failed = {t for d in debts.values() for t in d.affected_topics}
     nodes = []
     for cid, node in sorted(g.nodes.items(), key=lambda kv: (kv[1].level, kv[0])):
-        debt = debts[cid].debt if debts else 0.0
+        locked = meta[cid].grade > max_grade
+        debt = 0.0 if locked or not debts else debts[cid].debt
         nodes.append({
-            "id": cid, "name": node.name, "level": node.level, "description": descriptions[cid],
-            "debt": round(debt, 1), "status": services.concept_status(cid, debt, root, failed),
+            "id": cid, "name": node.name, "level": node.level, "grade": meta[cid].grade, "ncert": meta[cid].ncert,
+            "description": meta[cid].description, "debt": round(debt, 1),
+            "status": services.concept_status(cid, debt, root, failed, locked),
         })
     edges = [
         {"id": f"{req}->{cid}", "source": req, "target": cid}
@@ -104,7 +122,8 @@ def teacher_overview(db: Session = Depends(get_db)):
     return {"sessions": len(sessions), "debugged_sessions": debugged, "concepts": rows}
 
 
-# The scripted demo student from the brief: weak on the distributive property.
+# The scripted demo student from the brief: a Class 10 student whose quadratics
+# trouble traces back to the Class 7 distributive property.
 DEMO_WRONG = {
     "d05": "3x + 2",
     "d06": "-2x - 6",
@@ -122,10 +141,10 @@ def demo_session(db: Session = Depends(get_db)):
     Handy for building the UI without clicking through the test."""
     from .learning import session_out
 
-    s = StudySession(label="demo")
+    s = StudySession(label="demo", grade=10)
     db.add(s)
     db.commit()
     db.refresh(s)
-    for q in db.exec(select(Question).where(Question.is_repair == False).order_by(Question.id)).all():  # noqa: E712
+    for q in services.diagnostic_questions(db, 10):
         services.record_attempt(db, s, q, DEMO_WRONG.get(q.id, q.answer), None, 15000)
     return session_out(db, s)
