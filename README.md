@@ -33,7 +33,17 @@ Put your Featherless key in `backend/.env` (`AI_API_KEY=`) to switch the AI on.
 The database (SQLite by default) is created and seeded on first start.
 Reset it with `python -m app.seed --reset`. Run tests with `python -m pytest`.
 
-Docker: `docker build -t conceptdebt backend && docker run -p 8000:8000 --env-file backend/.env conceptdebt`
+Docker (the volume keeps the SQLite database across restarts and redeploys):
+
+```bash
+docker build -t conceptdebt backend
+docker run -d -p 8000:8000 --env-file backend/.env \
+  -e DATABASE_URL=sqlite:////data/conceptdebt.db -v conceptdebt-data:/data conceptdebt
+```
+
+SQLite is the database for the hackathon: one file, no setup. On a VPS it just works;
+on hosts with temporary disks (free Render/Railway) attach a persistent disk or the
+data resets on every deploy. Supabase is optional (see `DATABASE_URL` below).
 
 ## Configuration (`backend/.env`)
 
