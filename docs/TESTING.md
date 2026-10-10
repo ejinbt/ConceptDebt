@@ -10,15 +10,15 @@ uvicorn app.main:app --reload
 ```
 
 ## 1. Setup
-- [ ] `python -m pytest` → all tests pass (plain `pytest` can pick up a global install)
-- [ ] http://localhost:8000/api/health → `"status": "ok"`
-- [ ] http://localhost:8000/docs opens (Swagger UI)
-- [ ] http://localhost:8000/ opens the tester page, styled (Bootstrap loaded)
+- [x] `python -m pytest` → all tests pass (plain `pytest` can pick up a global install)
+- [x] http://localhost:8000/api/health → `"status": "ok"`
+- [x] http://localhost:8000/docs opens (Swagger UI)
+- [x] http://localhost:8000/ opens the tester page, styled (Bootstrap loaded)
 
 ## 2. AI (Featherless)
-- [ ] Key is in `backend/.env` as `AI_API_KEY=...`, server restarted
-- [ ] `/api/health` → `"ai_enabled": true` and the model name
-- [ ] Tester: start a test, answer **Q5 `Expand 3(x + 2)`** with `3x + 5` and working
+- [x] Key is in `backend/.env` as `AI_API_KEY=...`, server restarted
+- [x] `/api/health` → `"ai_enabled": true` and the model name
+- [] Tester: start a test, answer **Q5 `Expand 3(x + 2)`** with `3x + 5` and working
       `I multiplied 3 by x and added 5` → request log shows `"source": "ai"` with a
       misconception and a `rationale` (or `"unclassified"` if the model wasn't sure)
 - [ ] Time it: wrong answers it doesn't recognise should come back in < 5 s.
