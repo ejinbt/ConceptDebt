@@ -10,7 +10,7 @@ uvicorn app.main:app --reload
 ```
 
 ## 1. Setup
-- [ ] `pytest` → all tests pass
+- [ ] `python -m pytest` → all tests pass (plain `pytest` can pick up a global install)
 - [ ] http://localhost:8000/api/health → `"status": "ok"`
 - [ ] http://localhost:8000/docs opens (Swagger UI)
 - [ ] http://localhost:8000/ opens the tester page, styled (Bootstrap loaded)

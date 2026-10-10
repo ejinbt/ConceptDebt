@@ -19,6 +19,7 @@ everything and copies `.env.example` to `.env`:
 cd backend
 ./setup.sh && source .venv/bin/activate              # Linux / macOS
 # .\setup.ps1 ; .\.venv\Scripts\Activate.ps1          # Windows PowerShell
+# ./setup.sh && source .venv/Scripts/activate        # Windows Git Bash
 uvicorn app.main:app --reload
 ```
 
@@ -30,7 +31,7 @@ Put your Featherless key in `backend/.env` (`AI_API_KEY=`) to switch the AI on.
 - Test checklist: [`docs/TESTING.md`](docs/TESTING.md)
 
 The database (SQLite by default) is created and seeded on first start.
-Reset it with `python -m app.seed --reset`. Run tests with `pytest`.
+Reset it with `python -m app.seed --reset`. Run tests with `python -m pytest`.
 
 Docker: `docker build -t conceptdebt backend && docker run -p 8000:8000 --env-file backend/.env conceptdebt`
 
