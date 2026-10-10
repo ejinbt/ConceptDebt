@@ -17,17 +17,27 @@ import type { Analysis, SessionOut, ConceptDebt } from "../types/api";
 
 interface DebugConsoleProps {
   session: SessionOut;
+  initialAnalysis?: Analysis | null;
   onStartRepair: () => void;
   onBackToScore?: () => void;
   onSelectConcept?: (conceptId: string) => void;
   isRepairing?: boolean;
 }
 
-export function DebugConsole({ session, onStartRepair, onBackToScore, onSelectConcept, isRepairing }: DebugConsoleProps) {
-  const [analysis, setAnalysis] = useState<Analysis | null>(null);
-  const [loading, setLoading] = useState(true);
+export function DebugConsole({
+  session,
+  initialAnalysis,
+  onStartRepair,
+  onBackToScore,
+  onSelectConcept,
+  isRepairing,
+}: DebugConsoleProps) {
+  const [analysis, setAnalysis] = useState<Analysis | null>(initialAnalysis || null);
+  const [loading, setLoading] = useState(!initialAnalysis);
   const [error, setError] = useState<string | null>(null);
-  const [selectedConceptId, setSelectedConceptId] = useState<string | null>(null);
+  const [selectedConceptId, setSelectedConceptId] = useState<string | null>(
+    initialAnalysis?.root?.concept_id || null
+  );
 
   const fetchDebugData = async () => {
     setLoading(true);
@@ -46,8 +56,16 @@ export function DebugConsole({ session, onStartRepair, onBackToScore, onSelectCo
   };
 
   useEffect(() => {
-    fetchDebugData();
-  }, [session.session_id]);
+    if (!initialAnalysis) {
+      fetchDebugData();
+    } else {
+      setAnalysis(initialAnalysis);
+      setLoading(false);
+      if (initialAnalysis.root) {
+        setSelectedConceptId(initialAnalysis.root.concept_id);
+      }
+    }
+  }, [session.session_id, initialAnalysis]);
 
   if (loading) {
     return (

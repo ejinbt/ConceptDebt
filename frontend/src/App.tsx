@@ -31,6 +31,7 @@ export function App() {
   });
 
   const [isDebugging, setIsDebugging] = useState(false);
+  const [cachedAnalysis, setCachedAnalysis] = useState<import("./types/api").Analysis | null>(null);
   const [isRepairing, setIsRepairing] = useState(false);
   const [graphTab, setGraphTab] = useState<"console" | "graph">("console");
 
@@ -113,7 +114,8 @@ export function App() {
     setIsDebugging(true);
     setError(null);
     try {
-      await api.runDebug(session.session_id);
+      const analysisData = await api.runDebug(session.session_id);
+      setCachedAnalysis(analysisData);
       const updated = await api.getSession(session.session_id);
       setSession(updated);
       setCurrentView("debugged");
@@ -312,7 +314,7 @@ export function App() {
                     Load Demo Student
                   </h3>
                   <p className="text-xs text-[#9E9EA7] mb-4">
-                    Pre-answered Class 10 session (Alex, 46% symptom). Jump straight into root cause isolation and graph.
+                    Pre-answered Class 10 session (Alex, 53% symptom). Jump straight into root cause isolation and graph.
                   </p>
                 </div>
                 <button
@@ -411,6 +413,7 @@ export function App() {
             {graphTab === "console" ? (
               <DebugConsole
                 session={session}
+                initialAnalysis={cachedAnalysis}
                 onStartRepair={handleStartRepair}
                 onBackToScore={() => setCurrentView("score")}
                 isRepairing={isRepairing}
