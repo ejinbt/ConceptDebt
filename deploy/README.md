@@ -79,6 +79,56 @@ Then open `https://<DOMAIN>/` and run the demo flow from `docs/checklist.html`.
 | Stop everything | `docker compose down` (data stays; `down -v` deletes it) |
 | Changed `backend/.env` | `docker compose up -d` (recreates the container with the new values) |
 
+## Auto-deploy with GitHub Actions
+
+`.github/workflows/deploy.yml` runs on every push to `backend` that touches
+`backend/`, `deploy/` or the workflow (or by hand: **Actions → Test & deploy backend → Run workflow**):
+
+1. **test**: runs `pytest` on GitHub. If tests fail, nothing is deployed.
+2. **deploy**: SSHes into the VPS, `git reset --hard origin/backend`, rebuilds with
+   `docker compose up -d --build`, and fails the run if `/api/health` doesn't answer within ~60 s.
+
+`.env` files are gitignored, so the reset never touches your keys or settings.
+Don't edit tracked files directly on the server: the next deploy overwrites them.
+
+### One-time setup
+
+Do steps 1–4 above first, so the server has the repo, `.env` files and a working stack.
+
+**a. A deploy key for GitHub Actions to log in to the VPS** (on the VPS, as the user that owns the repo):
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/gha_deploy -N "" -C "github-actions"
+cat ~/.ssh/gha_deploy.pub >> ~/.ssh/authorized_keys
+cat ~/.ssh/gha_deploy        # copy this whole private key for the secret below
+```
+
+That user must be able to run Docker (`sudo usermod -aG docker $USER`, then log out and in).
+
+**b. Let the VPS pull from the private repo without a password.** Either:
+- store the token once: `git config --global credential.helper store`, then `git pull` and
+  enter your GitHub username + personal access token, or
+- add the server's SSH key as a read-only **Deploy key** (repo Settings → Deploy keys) and
+  `git remote set-url origin git@github.com:ejinbt/ConceptDebt.git`.
+
+Check that `git pull` works on the server with no prompt.
+
+**c. GitHub secrets** (repo Settings → Secrets and variables → Actions → New repository secret):
+
+| Secret | Value |
+|---|---|
+| `VPS_HOST` | `94.249.197.142` |
+| `VPS_USER` | the SSH user, e.g. `root` or `deploy` |
+| `VPS_SSH_KEY` | the private key from step a (including the BEGIN/END lines) |
+| `VPS_APP_DIR` | full path of the clone, e.g. `/root/ConceptDebt` |
+| `VPS_PORT` | only if SSH isn't on port 22 |
+
+The deploy job uses a GitHub **environment** called `production` (created
+automatically on first run). In Settings → Environments you can add a required
+reviewer if you want to approve each deploy.
+
+**d. Test it:** Actions → Test & deploy backend → Run workflow. Both jobs should go green.
+
 ## Frontend on Vercel
 
 Give your teammate `https://<DOMAIN>/api` as the API base URL
