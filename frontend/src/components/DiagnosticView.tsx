@@ -21,9 +21,10 @@ interface DiagnosticViewProps {
   session: SessionOut;
   onComplete: () => void;
   onSessionUpdate: (session: SessionOut) => void;
+  onExitTest?: () => void;
 }
 
-export function DiagnosticView({ session, onComplete }: DiagnosticViewProps) {
+export function DiagnosticView({ session, onComplete, onExitTest }: DiagnosticViewProps) {
   const [questions, setQuestions] = useState<QuestionOut[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, { answer: string; working: string; notLearned?: boolean }>>({});
@@ -185,7 +186,18 @@ export function DiagnosticView({ session, onComplete }: DiagnosticViewProps) {
       {/* Question Tracker Pill Bar */}
       <div className="mb-6">
         <div className="flex items-center justify-between text-xs font-mono text-[#9E9EA7] mb-3">
-          <span>{session.grade ? `CLASS ${session.grade} DIAGNOSTIC` : "DIAGNOSTIC PROGRESS"}</span>
+          <div className="flex items-center gap-3">
+            {onExitTest && (
+              <button
+                type="button"
+                onClick={onExitTest}
+                className="text-xs text-[#9E9EA7] hover:text-[#F3F3F4] transition-colors flex items-center gap-1 font-mono hover:underline"
+              >
+                <span>← Exit Test</span>
+              </button>
+            )}
+            <span>{session.grade ? `CLASS ${session.grade} DIAGNOSTIC` : "DIAGNOSTIC PROGRESS"}</span>
+          </div>
           <span>{answeredCount} / {questions.length} ANSWERED</span>
         </div>
         

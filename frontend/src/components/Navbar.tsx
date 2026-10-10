@@ -1,16 +1,29 @@
 import { useState, useEffect } from "react";
-import { Activity, Radio, Cpu, RotateCcw, GraduationCap } from "lucide-react";
+import { Radio, Cpu, RotateCcw, GraduationCap, Home } from "lucide-react";
 import { api } from "../services/api";
 import type { HealthOut, Phase } from "../types/api";
 
+export type NavView = "initial" | "diagnostic" | "score" | "debugged" | "repair" | "done";
+
 interface NavbarProps {
-  phase: Phase | "initial";
+  currentView: NavView;
+  sessionPhase: Phase | "initial";
   sessionId: string | null;
   grade?: number;
+  onNavigate: (view: NavView) => void;
   onReset: () => void;
+  onGoHome: () => void;
 }
 
-export function Navbar({ phase, sessionId, grade, onReset }: NavbarProps) {
+export function Navbar({
+  currentView,
+  sessionPhase,
+  sessionId,
+  grade,
+  onNavigate,
+  onReset,
+  onGoHome,
+}: NavbarProps) {
   const [health, setHealth] = useState<HealthOut | null>(null);
 
   useEffect(() => {
@@ -19,7 +32,19 @@ export function Navbar({ phase, sessionId, grade, onReset }: NavbarProps) {
       .catch(() => setHealth(null));
   }, []);
 
-  const steps: { key: Phase | "initial"; label: string; num: string }[] = [
+  // Compute what phases are unlocked based on session progress
+  const isPhaseUnlocked = (view: NavView): boolean => {
+    if (view === "initial") return true;
+    if (!sessionId) return false;
+    if (view === "diagnostic") return true;
+    if (view === "score") return true;
+    if (view === "debugged") return sessionPhase === "debugged" || sessionPhase === "repair" || sessionPhase === "done";
+    if (view === "repair") return sessionPhase === "repair" || sessionPhase === "done";
+    if (view === "done") return sessionPhase === "done";
+    return false;
+  };
+
+  const steps: { key: NavView; label: string; num: string }[] = [
     { key: "initial", label: "START", num: "01" },
     { key: "diagnostic", label: "DIAGNOSTIC", num: "02" },
     { key: "debugged", label: "DEBUG & GRAPH", num: "03" },
@@ -30,8 +55,12 @@ export function Navbar({ phase, sessionId, grade, onReset }: NavbarProps) {
   return (
     <header className="border-b border-[#35353B] bg-[#0E0E10]/90 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-        {/* Brand */}
-        <div className="flex items-center gap-3">
+        {/* Brand & Home clickable */}
+        <button
+          onClick={onGoHome}
+          className="flex items-center gap-3 hover:opacity-90 transition-opacity text-left cursor-pointer"
+          title="Return to Start / Home"
+        >
           <img 
             src="/Assets/logo.png" 
             alt="Concept Debt Logo" 
@@ -45,29 +74,36 @@ export function Navbar({ phase, sessionId, grade, onReset }: NavbarProps) {
               v1.0
             </span>
           </div>
-        </div>
+        </button>
 
-        {/* Phase Timeline Stepper */}
+        {/* Phase Timeline Stepper - Interactive for unlocked stages */}
         <nav className="hidden md:flex items-center gap-1.5 bg-[#2A2A2F]/50 p-1 rounded-full border border-[#35353B]">
           {steps.map((s, idx) => {
-            const isActive = phase === s.key;
+            const isActive = currentView === s.key || (s.key === "diagnostic" && currentView === "score");
+            const unlocked = isPhaseUnlocked(s.key);
+
             return (
-              <div
+              <button
                 key={s.key}
+                type="button"
+                onClick={() => unlocked && onNavigate(s.key)}
+                disabled={!unlocked}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all ${
                   isActive
-                    ? "bg-[#6A040F] text-[#F3F3F4] font-semibold shadow-sm"
-                    : "text-[#9E9EA7] hover:text-[#F3F3F4]"
+                    ? "bg-[#6A040F] text-[#F3F3F4] font-semibold shadow-sm cursor-default"
+                    : unlocked
+                    ? "text-[#9E9EA7] hover:text-[#F3F3F4] hover:bg-[#35353B] cursor-pointer"
+                    : "text-[#5B6275] opacity-40 cursor-not-allowed"
                 }`}
               >
-                <span className={`text-[10px] font-mono ${isActive ? "text-[#D00000]" : "text-[#9E9EA7]"}`}>
+                <span className={`text-[10px] font-mono ${isActive ? "text-[#D00000]" : "text-inherit"}`}>
                   {s.num}
                 </span>
                 <span>{s.label}</span>
                 {idx < steps.length - 1 && (
-                  <span className="text-[#35353B] ml-1">/</span>
+                  <span className="text-[#35353B] ml-1 select-none">/</span>
                 )}
-              </div>
+              </button>
             );
           })}
         </nav>
@@ -82,23 +118,24 @@ export function Navbar({ phase, sessionId, grade, onReset }: NavbarProps) {
           )}
 
           {sessionId && (
-            <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded bg-[#2A2A2F] border border-[#35353B] text-xs font-mono text-[#9E9EA7]">
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-[#2A2A2F] border border-[#35353B] text-xs font-mono text-[#9E9EA7]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#D00000] animate-pulse" />
-              <span>{sessionId.slice(0, 8)}...</span>
+              <span className="hidden sm:inline">{sessionId.slice(0, 8)}...</span>
               <button
                 onClick={onReset}
-                title="End session"
-                className="hover:text-[#F3F3F4] transition-colors ml-1"
+                title="End session and start fresh"
+                className="hover:text-[#F3F3F4] text-xs flex items-center gap-1 transition-colors ml-1"
               >
                 <RotateCcw className="w-3 h-3" />
+                <span className="text-[10px] uppercase font-mono">End</span>
               </button>
             </div>
           )}
 
           {/* AI / Backend Status */}
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-[#2A2A2F] border border-[#35353B] text-xs">
+          <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded bg-[#2A2A2F] border border-[#35353B] text-xs">
             <Radio className={`w-3 h-3 ${health?.status === "ok" ? "text-emerald-400" : "text-amber-400"}`} />
-            <span className="text-[#9E9EA7] hidden sm:inline">
+            <span className="text-[#9E9EA7]">
               {health?.ai_enabled ? (
                 <span className="flex items-center gap-1">
                   <Cpu className="w-3 h-3 text-[#D00000]" />

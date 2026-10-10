@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Navbar } from "./components/Navbar";
+import { Navbar, type NavView } from "./components/Navbar";
 import { DiagnosticView } from "./components/DiagnosticView";
 import { ScoreView } from "./components/ScoreView";
 import { DebugConsole } from "./components/DebugConsole";
 import { ConceptGraph } from "./components/ConceptGraph";
 import { RepairView } from "./components/RepairView";
 import { ReverifyView } from "./components/ReverifyView";
+import { ConfirmModal } from "./components/ConfirmModal";
 import { useSessionStore } from "./hooks/useSessionStore";
 import { Play, ArrowRight, ShieldAlert, Sparkles, Activity, Layers, GraduationCap } from "lucide-react";
 import { api } from "./services/api";
@@ -20,20 +21,35 @@ export function App() {
   const [resumeId, setResumeId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Flow State
-  const [viewingScore, setViewingScore] = useState(false);
+  // Decoupled Nav State: tracks which screen the user is currently looking at
+  const [currentView, setCurrentView] = useState<NavView>(() => {
+    if (!session) return "initial";
+    if (session.phase === "debugged") return "debugged";
+    if (session.phase === "repair") return "repair";
+    if (session.phase === "done") return "done";
+    return session.answered >= 5 ? "score" : "diagnostic";
+  });
+
   const [isDebugging, setIsDebugging] = useState(false);
   const [isRepairing, setIsRepairing] = useState(false);
   const [graphTab, setGraphTab] = useState<"console" | "graph">("console");
 
-  const phase = session?.phase || "initial";
+  // Confirmation Modals State
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+  const [confirmExitTestOpen, setConfirmExitTestOpen] = useState(false);
+
+  // Sync currentView when session changes phase
+  useEffect(() => {
+    if (!session) {
+      setCurrentView("initial");
+    }
+  }, [session]);
 
   // Fetch available NCERT classes for picker
   useEffect(() => {
     api.getClasses()
       .then(setAvailableClasses)
       .catch(() => {
-        // Fallback default
         setAvailableClasses([
           { grade: 8, label: "Class 8", questions: 12 },
           { grade: 9, label: "Class 9", questions: 12 },
@@ -51,7 +67,7 @@ export function App() {
         grade: selectedGrade,
       });
       setSession(newSession);
-      setViewingScore(false);
+      setCurrentView("diagnostic");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to create session");
     } finally {
@@ -65,7 +81,7 @@ export function App() {
     try {
       const demoSession = await api.createDemoSession();
       setSession(demoSession);
-      setViewingScore(true);
+      setCurrentView("score");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load demo session");
     } finally {
@@ -80,9 +96,11 @@ export function App() {
     try {
       const restored = await api.getSession(resumeId.trim());
       setSession(restored);
-      if (restored.answered >= 5 && restored.phase === "diagnostic") {
-        setViewingScore(true);
-      }
+      if (restored.phase === "done") setCurrentView("done");
+      else if (restored.phase === "repair") setCurrentView("repair");
+      else if (restored.phase === "debugged") setCurrentView("debugged");
+      else if (restored.answered >= 5) setCurrentView("score");
+      else setCurrentView("diagnostic");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Session not found");
     } finally {
@@ -98,7 +116,7 @@ export function App() {
       await api.runDebug(session.session_id);
       const updated = await api.getSession(session.session_id);
       setSession(updated);
-      setViewingScore(false);
+      setCurrentView("debugged");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to run debug analysis");
     } finally {
@@ -113,6 +131,7 @@ export function App() {
       await api.startRepair(session.session_id, 3);
       const updated = await api.getSession(session.session_id);
       setSession(updated);
+      setCurrentView("repair");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to start repair");
     } finally {
@@ -126,21 +145,36 @@ export function App() {
       await api.reverify(session.session_id);
       const updated = await api.getSession(session.session_id);
       setSession(updated);
+      setCurrentView("done");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to reverify");
     }
   };
 
+  const handleGoHome = () => {
+    if (currentView === "diagnostic" && session && session.answered < 12) {
+      setConfirmExitTestOpen(true);
+    } else {
+      setCurrentView("initial");
+    }
+  };
+
+  const handleConfirmReset = () => {
+    clearSession();
+    setCurrentView("initial");
+    setConfirmResetOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-[#0E0E10] text-[#F3F3F4] flex flex-col font-sans">
       <Navbar 
-        phase={viewingScore ? "diagnostic" : phase} 
+        currentView={currentView}
+        sessionPhase={session?.phase || "initial"}
         sessionId={session?.session_id || null}
         grade={session?.grade}
-        onReset={() => {
-          clearSession();
-          setViewingScore(false);
-        }} 
+        onNavigate={(view) => setCurrentView(view)}
+        onReset={() => setConfirmResetOpen(true)}
+        onGoHome={handleGoHome}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-8 flex flex-col justify-center">
@@ -153,8 +187,42 @@ export function App() {
         )}
 
         {/* 1. INITIAL LANDING SCREEN */}
-        {phase === "initial" && (
+        {currentView === "initial" && (
           <div className="max-w-3xl mx-auto w-full text-center py-6">
+            {/* If a session is already in progress, show resume pill banner */}
+            {session && (
+              <div className="mb-6 p-4 rounded-2xl bg-[#2A2A2F] border border-[#6A040F] flex flex-wrap items-center justify-between gap-3 text-left">
+                <div>
+                  <div className="text-xs font-mono text-[#D00000] font-bold uppercase">
+                    Session In Progress
+                  </div>
+                  <div className="text-sm font-semibold text-[#F3F3F4]">
+                    {session.label || "Student"} · Class {session.grade || 10} · Phase: {session.phase.toUpperCase()}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (session.phase === "done") setCurrentView("done");
+                      else if (session.phase === "repair") setCurrentView("repair");
+                      else if (session.phase === "debugged") setCurrentView("debugged");
+                      else if (session.answered >= 5) setCurrentView("score");
+                      else setCurrentView("diagnostic");
+                    }}
+                    className="px-4 py-1.5 rounded-lg bg-[#6A040F] hover:bg-[#D00000] text-xs font-semibold text-white transition-colors"
+                  >
+                    Continue Session →
+                  </button>
+                  <button
+                    onClick={() => setConfirmResetOpen(true)}
+                    className="px-3 py-1.5 rounded-lg bg-[#0E0E10] hover:bg-[#35353B] text-xs font-mono text-[#9E9EA7] transition-colors"
+                  >
+                    Discard
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#2A2A2F] border border-[#35353B] text-xs font-mono text-[#9E9EA7] mb-6">
               <span className="w-2 h-2 rounded-full bg-[#D00000] animate-pulse" />
               <span>NCERT CURRICULUM DIAGNOSTICS</span>
@@ -279,26 +347,27 @@ export function App() {
         )}
 
         {/* 2. DIAGNOSTIC ASSESSMENT VIEW */}
-        {phase === "diagnostic" && !viewingScore && (
+        {currentView === "diagnostic" && session && (
           <DiagnosticView
-            session={session!}
-            onComplete={() => setViewingScore(true)}
+            session={session}
+            onComplete={() => setCurrentView("score")}
             onSessionUpdate={(s) => setSession(s)}
+            onExitTest={() => setConfirmExitTestOpen(true)}
           />
         )}
 
         {/* 3. SYMPTOM SCORE VIEW */}
-        {phase === "diagnostic" && viewingScore && (
+        {currentView === "score" && session && (
           <ScoreView
-            session={session!}
-            onBackToTest={() => setViewingScore(false)}
+            session={session}
+            onBackToTest={() => setCurrentView("diagnostic")}
             onStartDebug={handleDebugLearning}
             isDebugging={isDebugging}
           />
         )}
 
         {/* 4. DEBUGGED CONSOLE & GRAPH VIEW */}
-        {phase === "debugged" && (
+        {currentView === "debugged" && session && (
           <div className="w-full space-y-6">
             {/* View Switcher Tabs */}
             <div className="flex items-center justify-between border-b border-[#35353B] pb-3">
@@ -329,22 +398,26 @@ export function App() {
               </div>
 
               <div className="flex items-center gap-3 text-xs font-mono text-[#9E9EA7]">
-                {session?.grade && <span>CLASS {session.grade}</span>}
-                <span className="hidden sm:inline">
-                  SESSION: {session!.session_id.slice(0, 8)}...
-                </span>
+                <button
+                  onClick={() => setCurrentView("score")}
+                  className="hover:text-[#F3F3F4] underline"
+                >
+                  ← Score Summary
+                </button>
+                {session.grade && <span>CLASS {session.grade}</span>}
               </div>
             </div>
 
             {graphTab === "console" ? (
               <DebugConsole
-                session={session!}
+                session={session}
                 onStartRepair={handleStartRepair}
+                onBackToScore={() => setCurrentView("score")}
                 isRepairing={isRepairing}
               />
             ) : (
               <div className="space-y-4">
-                <ConceptGraph sessionId={session!.session_id} />
+                <ConceptGraph sessionId={session.session_id} />
                 <div className="text-center pt-2">
                   <button
                     onClick={handleStartRepair}
@@ -359,30 +432,46 @@ export function App() {
         )}
 
         {/* 5. REPAIR MODE DRILLS */}
-        {phase === "repair" && (
+        {currentView === "repair" && session && (
           <RepairView
-            session={session!}
+            session={session}
             onFinishRepair={handleFinishRepair}
-            onBackToDebugger={() => {
-              setSession({ ...session!, phase: "debugged" });
-            }}
+            onBackToDebugger={() => setCurrentView("debugged")}
           />
         )}
 
         {/* 6. REVERIFY & REGRESSION RESULTS */}
-        {phase === "done" && (
+        {currentView === "done" && session && (
           <ReverifyView
-            session={session!}
-            onNewSession={() => {
-              clearSession();
-              setViewingScore(false);
-            }}
-            onInspectDebugger={() => {
-              setSession({ ...session!, phase: "debugged" });
-            }}
+            session={session}
+            onNewSession={() => setConfirmResetOpen(true)}
+            onInspectDebugger={() => setCurrentView("debugged")}
           />
         )}
       </main>
+
+      {/* Confirmation Dialogs */}
+      <ConfirmModal
+        isOpen={confirmResetOpen}
+        title="End Current Session?"
+        message="This will reset your diagnostic progress and return to the home screen. You can always paste your session ID to resume later."
+        confirmText="End Session"
+        isDestructive={true}
+        onConfirm={handleConfirmReset}
+        onCancel={() => setConfirmResetOpen(false)}
+      />
+
+      <ConfirmModal
+        isOpen={confirmExitTestOpen}
+        title="Exit Diagnostic Test?"
+        message="Your submitted answers are saved on the server. You can resume anytime from the start screen."
+        confirmText="Exit to Home"
+        onConfirm={() => {
+          setConfirmExitTestOpen(false);
+          setCurrentView("initial");
+        }}
+        onCancel={() => setConfirmExitTestOpen(false)}
+      />
 
       <footer className="border-t border-[#35353B] py-4 text-center text-xs text-[#9E9EA7]">
         <span>Concept Debt · NCERT Mathematics Diagnostic Engine & Knowledge Graph</span>

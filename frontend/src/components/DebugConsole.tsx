@@ -18,11 +18,12 @@ import type { Analysis, SessionOut, ConceptDebt } from "../types/api";
 interface DebugConsoleProps {
   session: SessionOut;
   onStartRepair: () => void;
+  onBackToScore?: () => void;
   onSelectConcept?: (conceptId: string) => void;
   isRepairing?: boolean;
 }
 
-export function DebugConsole({ session, onStartRepair, onSelectConcept, isRepairing }: DebugConsoleProps) {
+export function DebugConsole({ session, onStartRepair, onBackToScore, onSelectConcept, isRepairing }: DebugConsoleProps) {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -178,14 +179,26 @@ export function DebugConsole({ session, onStartRepair, onSelectConcept, isRepair
           </div>
 
           {/* Action Row */}
-          <div className="pt-4 border-t border-[#35353B] flex items-center justify-between gap-4">
-            <button
-              onClick={fetchDebugData}
-              className="px-4 py-2.5 rounded-xl bg-[#0E0E10] hover:bg-[#35353B] text-xs font-semibold text-[#9E9EA7] hover:text-[#F3F3F4] transition-colors flex items-center gap-2"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Re-run Analysis</span>
-            </button>
+          <div className="pt-4 border-t border-[#35353B] flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              {onBackToScore && (
+                <button
+                  type="button"
+                  onClick={onBackToScore}
+                  className="px-3.5 py-2.5 rounded-xl bg-[#0E0E10] hover:bg-[#35353B] text-xs font-semibold text-[#9E9EA7] hover:text-[#F3F3F4] transition-colors"
+                >
+                  ← Score Summary
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={fetchDebugData}
+                className="px-3.5 py-2.5 rounded-xl bg-[#0E0E10] hover:bg-[#35353B] text-xs font-semibold text-[#9E9EA7] hover:text-[#F3F3F4] transition-colors flex items-center gap-2"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Re-run</span>
+              </button>
+            </div>
 
             {root && (
               <button
