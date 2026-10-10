@@ -2,10 +2,13 @@ import { useState } from "react";
 import { Navbar } from "./components/Navbar";
 import { DiagnosticView } from "./components/DiagnosticView";
 import { ScoreView } from "./components/ScoreView";
+import { DebugConsole } from "./components/DebugConsole";
+import { ConceptGraph } from "./components/ConceptGraph";
+import { RepairView } from "./components/RepairView";
+import { ReverifyView } from "./components/ReverifyView";
 import { useSessionStore } from "./hooks/useSessionStore";
-import { Play, ArrowRight, ShieldAlert, Sparkles, Activity } from "lucide-react";
+import { Play, ArrowRight, ShieldAlert, Sparkles, Activity, Layers } from "lucide-react";
 import { api } from "./services/api";
-import type { SessionOut } from "./types/api";
 
 export function App() {
   const { session, setSession, clearSession } = useSessionStore();
@@ -14,9 +17,11 @@ export function App() {
   const [resumeId, setResumeId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Sub-phase state when in diagnostic flow (whether answering questions or viewing score symptom)
+  // Flow State
   const [viewingScore, setViewingScore] = useState(false);
   const [isDebugging, setIsDebugging] = useState(false);
+  const [isRepairing, setIsRepairing] = useState(false);
+  const [graphTab, setGraphTab] = useState<"console" | "graph">("console");
 
   const phase = session?.phase || "initial";
 
@@ -40,7 +45,6 @@ export function App() {
     try {
       const demoSession = await api.createDemoSession();
       setSession(demoSession);
-      // Demo session has already answered 13 questions, so show symptom score immediately!
       setViewingScore(true);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load demo session");
@@ -72,7 +76,6 @@ export function App() {
     setError(null);
     try {
       await api.runDebug(session.session_id);
-      // Refresh session state to advance phase to 'debugged'
       const updated = await api.getSession(session.session_id);
       setSession(updated);
       setViewingScore(false);
@@ -80,6 +83,31 @@ export function App() {
       setError(err instanceof Error ? err.message : "Failed to run debug analysis");
     } finally {
       setIsDebugging(false);
+    }
+  };
+
+  const handleStartRepair = async () => {
+    if (!session) return;
+    setIsRepairing(true);
+    try {
+      await api.startRepair(session.session_id, 3);
+      const updated = await api.getSession(session.session_id);
+      setSession(updated);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to start repair");
+    } finally {
+      setIsRepairing(false);
+    }
+  };
+
+  const handleFinishRepair = async () => {
+    if (!session) return;
+    try {
+      await api.reverify(session.session_id);
+      const updated = await api.getSession(session.session_id);
+      setSession(updated);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to reverify");
     }
   };
 
@@ -103,7 +131,7 @@ export function App() {
           </div>
         )}
 
-        {/* Phase 1: Initial Landing / Start */}
+        {/* 1. INITIAL LANDING SCREEN */}
         {phase === "initial" && (
           <div className="max-w-3xl mx-auto w-full text-center py-6">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#2A2A2F] border border-[#35353B] text-xs font-mono text-[#9E9EA7] mb-6">
@@ -201,16 +229,16 @@ export function App() {
           </div>
         )}
 
-        {/* Phase 2: Diagnostic Assessment Flow */}
+        {/* 2. DIAGNOSTIC ASSESSMENT VIEW */}
         {phase === "diagnostic" && !viewingScore && (
           <DiagnosticView
             session={session!}
             onComplete={() => setViewingScore(true)}
-            onSessionUpdate={(s: SessionOut) => setSession(s)}
+            onSessionUpdate={(s) => setSession(s)}
           />
         )}
 
-        {/* Phase 2: Diagnostic Score Symptom Reveal */}
+        {/* 3. SYMPTOM SCORE VIEW */}
         {phase === "diagnostic" && viewingScore && (
           <ScoreView
             session={session!}
@@ -220,28 +248,87 @@ export function App() {
           />
         )}
 
-        {/* Placeholder for Debugged & Later Phases (Ready for Phase 3) */}
-        {(phase === "debugged" || phase === "repair" || phase === "done") && (
-          <div className="max-w-xl mx-auto text-center py-12 p-8 rounded-2xl bg-[#2A2A2F] border border-[#35353B]">
-            <div className="w-12 h-12 rounded-xl bg-[#6A040F] text-[#F3F3F4] flex items-center justify-center mx-auto mb-4">
-              <Activity className="w-6 h-6 text-[#D00000]" />
+        {/* 4. DEBUGGED CONSOLE & GRAPH VIEW */}
+        {phase === "debugged" && (
+          <div className="w-full space-y-6">
+            {/* View Switcher Tabs */}
+            <div className="flex items-center justify-between border-b border-[#35353B] pb-3">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setGraphTab("console")}
+                  className={`px-4 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all flex items-center gap-2 ${
+                    graphTab === "console"
+                      ? "bg-[#6A040F] text-[#F3F3F4] border border-[#D00000]/40"
+                      : "text-[#9E9EA7] hover:text-[#F3F3F4]"
+                  }`}
+                >
+                  <Activity className="w-3.5 h-3.5" />
+                  <span>ROOT CAUSE & STACK TRACE</span>
+                </button>
+
+                <button
+                  onClick={() => setGraphTab("graph")}
+                  className={`px-4 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all flex items-center gap-2 ${
+                    graphTab === "graph"
+                      ? "bg-[#6A040F] text-[#F3F3F4] border border-[#D00000]/40"
+                      : "text-[#9E9EA7] hover:text-[#F3F3F4]"
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>KNOWLEDGE GRAPH VIEW</span>
+                </button>
+              </div>
+
+              <span className="text-xs font-mono text-[#9E9EA7] hidden sm:inline">
+                SESSION: {session!.session_id.slice(0, 8)}...
+              </span>
             </div>
-            <h2 className="text-2xl font-display font-bold text-[#F3F3F4] mb-2">
-              Phase: {phase.toUpperCase()}
-            </h2>
-            <p className="text-xs text-[#9E9EA7] font-mono mb-6">
-              Root Analysis computed successfully. Ready for Phase 3 & 4 (Debugger Console & React Flow Graph).
-            </p>
-            <button
-              onClick={() => {
-                clearSession();
-                setViewingScore(false);
-              }}
-              className="px-4 py-2 rounded-lg bg-[#35353B] hover:bg-[#6A040F] text-xs text-[#F3F3F4] font-semibold transition-colors"
-            >
-              Reset Session
-            </button>
+
+            {graphTab === "console" ? (
+              <DebugConsole
+                session={session!}
+                onStartRepair={handleStartRepair}
+                isRepairing={isRepairing}
+              />
+            ) : (
+              <div className="space-y-4">
+                <ConceptGraph sessionId={session!.session_id} />
+                <div className="text-center pt-2">
+                  <button
+                    onClick={handleStartRepair}
+                    className="px-6 py-2.5 rounded-xl bg-[#6A040F] hover:bg-[#D00000] text-xs font-semibold text-[#F3F3F4] tracking-wider uppercase transition-all shadow-lg"
+                  >
+                    Proceed to Repair Mode →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
+        )}
+
+        {/* 5. REPAIR MODE DRILLS */}
+        {phase === "repair" && (
+          <RepairView
+            session={session!}
+            onFinishRepair={handleFinishRepair}
+            onBackToDebugger={() => {
+              setSession({ ...session!, phase: "debugged" });
+            }}
+          />
+        )}
+
+        {/* 6. REVERIFY & REGRESSION RESULTS */}
+        {phase === "done" && (
+          <ReverifyView
+            session={session!}
+            onNewSession={() => {
+              clearSession();
+              setViewingScore(false);
+            }}
+            onInspectDebugger={() => {
+              setSession({ ...session!, phase: "debugged" });
+            }}
+          />
         )}
       </main>
 
