@@ -64,3 +64,28 @@ def test_errors(client):
     sid = client.post("/api/sessions").json()["session_id"]
     assert client.post(f"/api/sessions/{sid}/repair").status_code == 409
     assert client.post("/api/attempts", json={"session_id": sid, "question_id": "zzz", "answer": "1"}).status_code == 404
+
+
+def test_gibberish_is_invalid_and_ignored(client):
+    sid = client.post("/api/sessions", json={}).json()["session_id"]
+    for answer in ["hello", ")))", "idk"]:
+        r = client.post("/api/attempts", json={"session_id": sid, "question_id": "d05", "answer": answer}).json()
+        assert r["source"] == "invalid" and r["correct"] is False and r["misconception"] is None
+    r = client.post("/api/attempts", json={"session_id": sid, "question_id": "d09", "answer": "seven"}).json()
+    assert r["source"] == "invalid"
+
+    score = client.get(f"/api/sessions/{sid}/score").json()
+    assert score["answered"] == 0
+    analysis = client.get(f"/api/sessions/{sid}/debt").json()
+    assert analysis["wrong"] == 0 and analysis["concepts"] == []
+
+    # a real wrong answer in the same session still counts
+    r = client.post("/api/attempts", json={"session_id": sid, "question_id": "d05", "answer": "3y + 6"}).json()
+    assert r["source"] == "invalid"  # y is not in the question
+    r = client.post("/api/attempts", json={"session_id": sid, "question_id": "d05", "answer": "3x + 2"}).json()
+    assert r["source"] == "rule"
+
+
+def test_health_reports_ai_stats(client):
+    h = client.get("/api/health").json()
+    assert set(h["ai_stats"]) == {"calls", "ok", "failed", "last_error"}

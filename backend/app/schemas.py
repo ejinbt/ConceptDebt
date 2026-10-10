@@ -54,7 +54,7 @@ class AttemptOut(BaseModel):
     correct_answer: str
     misconception: Optional[MisconceptionRef]
     confidence: float
-    source: Literal["rule", "ai", "unclassified", "correct"]
+    source: Literal["rule", "ai", "unclassified", "correct", "invalid"]
     rationale: Optional[str]
 
 
@@ -187,7 +187,15 @@ class TeacherOut(BaseModel):
     concepts: list[TeacherConcept]
 
 
+class AIStats(BaseModel):
+    calls: int = Field(description="AI requests since the server started")
+    ok: int = Field(description="Replies that came back as valid JSON")
+    failed: int = Field(description="Errors, timeouts, rate limits or unusable replies (app fell back to rules/templates)")
+    last_error: Optional[str]
+
+
 class HealthOut(BaseModel):
     status: str
     ai_enabled: bool
     ai_model: Optional[str]
+    ai_stats: AIStats

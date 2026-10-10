@@ -39,7 +39,7 @@ Docker: `docker build -t conceptdebt backend && docker run -p 8000:8000 --env-fi
 
 | Variable | Default | Notes |
 |---|---|---|
-| `DATABASE_URL` | `sqlite:///backend/conceptdebt.db` | For Supabase: `postgresql+psycopg://postgres:<password>@db.<ref>.supabase.co:5432/postgres` |
+| `DATABASE_URL` | `sqlite:///backend/conceptdebt.db` | For Supabase use the **Session pooler** string with a `postgresql+psycopg://` prefix: `postgresql+psycopg://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres` |
 | `AI_API_KEY` | empty | Featherless key. Empty = AI off, app still works on rules + templates |
 | `AI_BASE_URL` | `https://api.featherless.ai/v1` | Any OpenAI-compatible endpoint |
 | `AI_MODEL` | `Qwen/Qwen2.5-32B-Instruct` | Any chat model your plan includes. On the $25 Premium plan a ~32B model allows 2 requests at once; 70B+ allows only 1 |

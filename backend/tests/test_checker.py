@@ -30,3 +30,13 @@ def test_distractor_match():
 def test_garbage_is_safe():
     assert not checker.check("expression", "3x + 6", "import os")
     assert not checker.check("number", "5", "")
+
+
+def test_valid_answer_detection():
+    v = checker.is_valid_answer
+    assert v("expression", "3x + 2", "3x + 6", "Expand 3(x + 2)")
+    assert v("expression", "6x + y - 4", "6x + 2y - 8", "Expand 2(3x + y - 4)")
+    assert not v("expression", "hello", "3x + 6", "Expand 3(x + 2)")
+    assert not v("expression", ")))", "3x + 6", "Expand 3(x + 2)")
+    assert v("number", "x = 17", "7", "Solve x + 5 = 12. What is x?")
+    assert not v("number", "abc", "7", "Solve x + 5 = 12. What is x?")

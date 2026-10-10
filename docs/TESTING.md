@@ -25,8 +25,8 @@ uvicorn app.main:app --reload
       If slower, try a smaller `AI_MODEL`
 - [ ] Click **Debug learning** → explanation ends with `[ai]`, reads naturally,
       mentions the root concept
-- [ ] Terminal has no `AI reply had no JSON` / `failed validation` warnings.
-      A few are OK (it falls back), lots means change the model
+- [ ] Top-right of the tester (or `/api/health` → `ai_stats`) shows mostly `ok`, few `failed`.
+      Hover "failed" to see the last error. Lots of failures means change the model
 - [ ] Set `AI_DISABLED=1`, restart → everything still works, explanation shows `[template]`
 
 ## 3. Demo flow (the one judges see)
@@ -42,7 +42,8 @@ uvicorn app.main:app --reload
 - [ ] New session, answer Q1 with `2/5` → after Debug, Fraction Operations shows debt
 - [ ] Equivalent answers are accepted: `6 + 3x`, `3*x+6`, `x = 7`, `x²`, `0.8333` for `5/6`
 - [ ] Q11 (factorise): `6x + 9` is marked wrong, `3(2x + 3)` is right
-- [ ] Junk input (`hello`, `)))`) is marked wrong, no server error
+- [ ] Junk input (`hello`, `)))`, `idk`) shows "doesn't look like a maths answer", stays on the
+      question, and doesn't change the score or debt (`"source": "invalid"`)
 
 ## 5. Navigation (tester page)
 - [ ] **← Previous** and **Skip →** move between questions

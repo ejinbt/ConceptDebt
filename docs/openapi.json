@@ -579,6 +579,44 @@
   },
   "components": {
     "schemas": {
+      "AIStats": {
+        "properties": {
+          "calls": {
+            "type": "integer",
+            "title": "Calls",
+            "description": "AI requests since the server started"
+          },
+          "ok": {
+            "type": "integer",
+            "title": "Ok",
+            "description": "Replies that came back as valid JSON"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed",
+            "description": "Errors, timeouts, rate limits or unusable replies (app fell back to rules/templates)"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "calls",
+          "ok",
+          "failed",
+          "last_error"
+        ],
+        "title": "AIStats"
+      },
       "AnalysisOut": {
         "properties": {
           "session_id": {
@@ -756,7 +794,8 @@
               "rule",
               "ai",
               "unclassified",
-              "correct"
+              "correct",
+              "invalid"
             ],
             "title": "Source"
           },
@@ -1093,13 +1132,17 @@
               }
             ],
             "title": "Ai Model"
+          },
+          "ai_stats": {
+            "$ref": "#/components/schemas/AIStats"
           }
         },
         "type": "object",
         "required": [
           "status",
           "ai_enabled",
-          "ai_model"
+          "ai_model",
+          "ai_stats"
         ],
         "title": "HealthOut"
       },

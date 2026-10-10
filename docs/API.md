@@ -69,8 +69,15 @@ Suggested UI hint under the input: *"Use ^ for powers, e.g. x^2"*.
 
 ### `GET /api/health`
 ```json
-{ "status": "ok", "ai_enabled": true, "ai_model": "Qwen/Qwen2.5-32B-Instruct" }
+{
+  "status": "ok",
+  "ai_enabled": true,
+  "ai_model": "Qwen/Qwen2.5-32B-Instruct",
+  "ai_stats": { "calls": 12, "ok": 11, "failed": 1, "last_error": "AI rate limited (too many requests at once for your plan): ..." }
+}
 ```
+`ai_stats` counts AI requests since the server started. `failed` means the app fell
+back to rules/templates for that request (nothing breaks), `last_error` says why.
 `ai_enabled: false` means explanations come from templates and unknown wrong answers
 aren't classified. Everything else works the same.
 
@@ -153,6 +160,7 @@ Response:
 | `rule` | matched a known wrong answer for this question | 0.9 |
 | `ai` | the AI classified it from the answer and working | ≤ 0.85 |
 | `unclassified` | wrong, cause unknown (still counts as weak evidence) | 0.3 |
+| `invalid` | not a maths answer (`hello`, `)))`, `idk`, letters that aren't in the question). **Ignored by scoring and the score.** Ask the student to re-enter it | 0 |
 
 **Re-answering is allowed.** Posting again for the same `question_id` in the same
 session **replaces** the earlier attempt (it doesn't count twice), so a "Previous"
@@ -375,7 +383,7 @@ export interface MisconceptionRef { id: string; name: string }
 export interface MisconceptionCount extends MisconceptionRef { count: number }
 export interface AttemptOut {
   attempt_id: number; question_id: string; mode: "diagnostic" | "repair"; answer: string; working: string | null; correct: boolean; correct_answer: string;
-  misconception: MisconceptionRef | null; confidence: number; source: "rule" | "ai" | "unclassified" | "correct"; rationale: string | null;
+  misconception: MisconceptionRef | null; confidence: number; source: "rule" | "ai" | "unclassified" | "correct" | "invalid"; rationale: string | null;
 }
 export interface ScoreOut { session_id: string; answered: number; correct: number; total_questions: number; percent: number }
 export interface ConceptDebt {

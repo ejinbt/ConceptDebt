@@ -278,13 +278,14 @@ function showQuestion(mode, index) {
   $("q-concept").textContent = q.concept_name;
   $("q-pills").innerHTML = queue.map((x, i) => {
     const a = state.answers[x.id];
-    const cls = !a ? "btn-outline-secondary" : mode === "repair" ? (a.correct ? "btn-success" : "btn-danger") : "btn-secondary";
+    const cls = !a ? "btn-outline-secondary" : a.source === "invalid" ? "btn-warning" : mode === "repair" ? (a.correct ? "btn-success" : "btn-danger") : "btn-secondary";
     return `<button type="button" class="btn btn-sm qpill ${cls} ${i === index ? "border border-2 border-light" : ""}" onclick="go('${mode === "repair" ? "repair" : "test"}/${i}')">${i + 1}</button>`;
   }).join("");
   $("q-prompt").textContent = q.prompt;
   $("q-answer").value = prev?.answer ?? "";
   $("q-working").value = prev?.working ?? "";
-  $("q-feedback").innerHTML = prev && mode === "repair" ? feedback(prev) : prev ? `<span class="text-secondary small">answered, submit again to change it</span>` : "";
+  $("q-feedback").innerHTML = prev?.source === "invalid" ? `<span class="text-warning">⚠ Your last answer wasn't a maths answer, so it doesn't count yet.</span>`
+    : prev && mode === "repair" ? feedback(prev) : prev ? `<span class="text-secondary small">answered, submit again to change it</span>` : "";
   $("q-submit").disabled = false;
   $("q-submit").textContent = prev ? "Update answer" : "Submit";
   $("q-prev").disabled = index === 0;
@@ -320,6 +321,15 @@ async function submitAnswer(e) {
   if (!r) return;
   state.answers[q.id] = r;
   state.session.answered = Object.keys(state.answers).length;
+  refreshHealth();
+  if (r.source === "invalid") {
+    $("q-feedback").innerHTML = `<span class="text-warning">⚠ That doesn't look like a maths answer. Check it and submit again, or skip.</span>`;
+    $("q-answer").select();
+    const pill = $("q-pills").children[state.index];
+    pill.classList.remove("btn-outline-secondary", "btn-secondary", "btn-success", "btn-danger");
+    pill.classList.add("btn-warning");
+    return;
+  }
   if (state.mode === "repair") {
     $("q-feedback").innerHTML = feedback(r);
     await new Promise((ok) => setTimeout(ok, 900));
@@ -349,6 +359,7 @@ async function runDebug() {
   try {
     state.analysis = await call("POST", `/sessions/${sid()}/debug`);
     state.repair = []; state.result = null;  // new diagnosis, old repair set no longer applies
+    refreshHealth();
     await refreshSession();
   } finally { $("debug-btn").disabled = false; }
   go("debug");
@@ -406,11 +417,19 @@ async function showResult() {
   show("result");
 }
 
+async function refreshHealth() {
+  const h = await fetch(API + "/health").then((r) => r.json()).catch(() => null);
+  if (!h) return;
+  const s = h.ai_stats;
+  $("health").innerHTML = !h.ai_enabled ? "AI: off (rules + templates)"
+    : `AI: ${esc(h.ai_model)} · <span class="text-success">${s.ok} ok</span> · <span class="${s.failed ? "text-danger" : ""}" title="${esc(s.last_error || "")}">${s.failed} failed</span>`;
+}
+
 // --- boot ----------------------------------------------------------------------
 
 window.addEventListener("hashchange", render);
 (async () => {
-  call("GET", "/health").then((h) => { $("health").textContent = h.ai_enabled ? `AI: ${h.ai_model}` : "AI: off (rules + templates)"; });
+  refreshHealth();
   const saved = load();
   if (saved.session_id) {
     try {

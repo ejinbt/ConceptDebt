@@ -35,9 +35,20 @@ def _extract_json(text: str) -> Optional[str]:
     return text[start : end + 1] if start != -1 and end > start else None
 
 
+# Counters shown in GET /api/health so you can see AI failures without reading logs
+STATS: dict = {"calls": 0, "ok": 0, "failed": 0, "last_error": None}
+
+
+def _fail(message: str) -> None:
+    log.warning(message)
+    STATS["failed"] += 1
+    STATS["last_error"] = message[:300]
+
+
 def _parse(system: str, prompt: str, schema: type[BaseModel], max_tokens: int = 1500):
     if not enabled():
         return None
+    STATS["calls"] += 1
     instructions = (
         f"{system}\n\nReply with a single JSON object and nothing else. "
         f"It must match this JSON schema:\n{json.dumps(schema.model_json_schema())}"
@@ -50,25 +61,22 @@ def _parse(system: str, prompt: str, schema: type[BaseModel], max_tokens: int = 
             temperature=0.2,
         )
     except openai.APIConnectionError as e:
-        log.warning("AI connection error: %s", e)
-        return None
+        return _fail(f"AI connection error: {e}")
     except openai.RateLimitError as e:
-        log.warning("AI rate limited: %s", e)
-        return None
+        return _fail(f"AI rate limited (too many requests at once for your plan): {e}")
     except openai.APIStatusError as e:
-        log.warning("AI request failed (%s): %s", e.status_code, e.message)
-        return None
+        return _fail(f"AI request failed ({e.status_code}): {e.message}")
 
     content = (response.choices[0].message.content or "") if response.choices else ""
     raw = _extract_json(content)
     if raw is None:
-        log.warning("AI reply had no JSON: %.200s", content)
-        return None
+        return _fail(f"AI reply had no JSON: {content[:200]}")
     try:
-        return schema.model_validate_json(raw)
+        result = schema.model_validate_json(raw)
     except ValidationError as e:
-        log.warning("AI reply failed validation: %s", e)
-        return None
+        return _fail(f"AI reply failed validation: {e}")
+    STATS["ok"] += 1
+    return result
 
 
 # --- mistake interpretation -------------------------------------------------

@@ -49,3 +49,16 @@ def test_generated_questions_are_validated(monkeypatch):
     qs = ai.generate_repair_questions({"name": "Distributive", "description": ""}, CANDIDATES, 3)
     assert len(qs) == 1
     assert qs[0]["distractors"] == [{"answer": "2x + 7", "misconception_id": "partial_distribution"}]
+
+
+def test_stats_count_ok_and_failed(monkeypatch):
+    monkeypatch.setattr(ai, "enabled", lambda: True)
+    before = dict(ai.STATS)
+    monkeypatch.setattr(ai, "_get_client", lambda: _fake('{"misconception_id": "none", "confidence": 0.1, "rationale": "x"}'))
+    ai.classify_mistake("q", "a", "b", None, CANDIDATES)
+    monkeypatch.setattr(ai, "_get_client", lambda: _fake("no json here"))
+    ai.classify_mistake("q", "a", "b", None, CANDIDATES)
+    assert ai.STATS["calls"] == before["calls"] + 2
+    assert ai.STATS["ok"] == before["ok"] + 1
+    assert ai.STATS["failed"] == before["failed"] + 1
+    assert "no JSON" in ai.STATS["last_error"]

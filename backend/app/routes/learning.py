@@ -99,7 +99,7 @@ def list_attempts(session_id: str, db: Session = Depends(get_db)):
 def plain_score(session_id: str, db: Session = Depends(get_db)):
     """The 'symptom' view: a normal percentage score on the diagnostic."""
     services.get_session(db, session_id)
-    latest = {a.question_id: a for a in services.session_attempts(db, session_id) if a.mode == "diagnostic"}
+    latest = {a.question_id: a for a in services.session_attempts(db, session_id) if a.mode == "diagnostic" and a.source != "invalid"}
     total = len(db.exec(select(Question).where(Question.is_repair == False)).all())  # noqa: E712
     correct = sum(a.correct for a in latest.values())
     return ScoreOut(
@@ -172,7 +172,7 @@ def reverify(session_id: str, db: Session = Depends(get_db)):
         if before.get(cid, 0.0) >= 1 or after.get(cid, 0.0) >= 1
     ]
     changes.sort(key=lambda c: c["change"])
-    repair = [a for a in services.session_attempts(db, session_id) if a.mode == "repair"]
+    repair = [a for a in services.session_attempts(db, session_id) if a.mode == "repair" and a.source != "invalid"]
     return ReverifyOut(
         session_id=session_id,
         root_concept_id=root_id,

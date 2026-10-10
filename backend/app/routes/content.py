@@ -21,7 +21,12 @@ def question_out(q: Question, concept_name: str) -> QuestionOut:
 
 @router.get("/health", response_model=HealthOut)
 def health():
-    return HealthOut(status="ok", ai_enabled=ai.enabled(), ai_model=config.AI_MODEL if ai.enabled() else None)
+    return HealthOut(
+        status="ok",
+        ai_enabled=ai.enabled(),
+        ai_model=config.AI_MODEL if ai.enabled() else None,
+        ai_stats=ai.STATS,
+    )
 
 
 @router.get("/diagnostic", response_model=list[QuestionOut])

@@ -106,7 +106,7 @@ const SECTIONS = [
     "Start a test, answer Q5 <code>Expand 3(x + 2)</code> with <code>3x + 5</code> and working <code>I multiplied 3 by x and added 5</code> → request log shows <code>\"source\": \"ai\"</code> with a misconception and rationale (or <code>\"unclassified\"</code> if the model wasn't sure)",
     "Wrong answers it doesn't recognise come back in under ~5 s (note the time)",
     "Click <b>Debug learning</b> → explanation ends with <code>[ai]</code>, reads naturally, mentions the root concept",
-    "Terminal has few or no <code>AI reply had no JSON</code> / <code>failed validation</code> warnings",
+    "Top-right of the tester (or <code>/api/health</code> → <code>ai_stats</code>) shows mostly <b>ok</b>, few <b>failed</b>. Hover \"failed\" to see the last error",
     "Set <code>AI_DISABLED=1</code>, restart → everything still works, explanation shows <code>[template]</code>",
   ]],
   ["Demo flow (what judges see)", [
@@ -122,7 +122,7 @@ const SECTIONS = [
     "New session, answer Q1 with <code>2/5</code> → after Debug, Fraction Operations shows debt",
     "Equivalent answers accepted: <code>6 + 3x</code>, <code>3*x+6</code>, <code>x = 7</code>, <code>x²</code>, <code>0.8333</code> for <code>5/6</code>",
     "Q11 (factorise): <code>6x + 9</code> is marked wrong, <code>3(2x + 3)</code> is right",
-    "Junk input (<code>hello</code>, <code>)))</code>) is marked wrong, no server error",
+    "Junk input (<code>hello</code>, <code>)))</code>, <code>idk</code>) shows \"doesn't look like a maths answer\", stays on the question, doesn't change score or debt",
   ]],
   ["Navigation (tester page)", [
     "<b>← Previous</b> and <b>Skip →</b> move between questions",

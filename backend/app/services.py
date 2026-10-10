@@ -53,7 +53,10 @@ def record_attempt(
     correct = checker.check(question.kind, question.answer, answer)
     misconception_id, confidence, source, rationale = None, 0.0, "correct", None
 
-    if not correct:
+    if not correct and not checker.is_valid_answer(question.kind, answer, question.answer, question.prompt):
+        # gibberish is not evidence of a misconception: store it, but scoring ignores it
+        source, rationale = "invalid", "This doesn't look like a maths answer for this question."
+    elif not correct:
         misconception_id = checker.match_distractor(question.kind, question.distractors, answer)
         if misconception_id:
             confidence, source = RULE_CONFIDENCE, "rule"
@@ -108,7 +111,7 @@ def candidate_misconceptions(db: Session, concept_id: str) -> list[dict]:
 
 def analyse(db: Session, session_id: str) -> tuple[ConceptGraph, dict[str, ConceptDebt], Optional[RootCause], list[Attempt]]:
     graph = load_graph(db)
-    attempts = session_attempts(db, session_id)
+    attempts = [a for a in session_attempts(db, session_id) if a.source != "invalid"]
     questions = {q.id: q for q in db.exec(select(Question)).all()}
     mis_concept = {m.id: m.concept_id for m in db.exec(select(Misconception)).all()}
     evidence = [

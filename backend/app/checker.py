@@ -38,6 +38,21 @@ def parse(text: str, evaluate: bool = True) -> Optional[sympy.Expr]:
         return None
 
 
+def is_valid_answer(kind: str, given: str, expected: str, prompt: str = "") -> bool:
+    """False for gibberish: input that isn't maths, or uses letters that have
+    nothing to do with the question ("hello" parses as h*e*l*l*o)."""
+    expr = parse(given)
+    if expr is None:
+        return False
+    used = {str(s) for s in expr.free_symbols}
+    if kind == "number":
+        return not used
+    allowed = {str(s) for s in (parse(expected) or sympy.Integer(0)).free_symbols}
+    allowed |= set(re.findall(r"(?<![a-z])([a-z])(?![a-z])", prompt.lower()))
+    allowed |= {"x"}
+    return used <= allowed
+
+
 def equivalent(a: str, b: str, kind: str = "expression") -> bool:
     ea, eb = parse(a), parse(b)
     if ea is None or eb is None:
