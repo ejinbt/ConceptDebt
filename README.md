@@ -11,7 +11,7 @@ broken, gives a short targeted repair, and measures the improvement.
 
 | | |
 |---|---|
-| **Live app** | _add your Vercel URL here_ |
+| **Live app** | https://concept-debt.vercel.app |
 | **Live API** | https://api.94.249.197.142.sslip.io/api |
 | **API docs (interactive)** | https://api.94.249.197.142.sslip.io/docs |
 
